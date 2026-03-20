@@ -3,12 +3,13 @@ import pool from '@/lib/db'
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const result = await pool.query(
       'SELECT * FROM notes WHERE id = $1',
-      [params.id]
+      [id]
     )
     if (result.rows.length === 0) {
       return NextResponse.json({ error: 'Note not found' }, { status: 404 })
@@ -22,8 +23,9 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const { title, content, tags } = await request.json()
     const result = await pool.query(
@@ -31,7 +33,7 @@ export async function PUT(
        SET title = $1, content = $2, tags = $3, updated_at = NOW()
        WHERE id = $4 
        RETURNING *`,
-      [title, content, tags || [], params.id]
+      [title, content, tags || [], id]
     )
     return NextResponse.json(result.rows[0])
   } catch (error) {
@@ -42,10 +44,11 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
-    await pool.query('DELETE FROM notes WHERE id = $1', [params.id])
+    await pool.query('DELETE FROM notes WHERE id = $1', [id])
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting note:', error)
