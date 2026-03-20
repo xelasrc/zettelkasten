@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const { title, content } = await request.json()
     const result = await pool.query(
       'INSERT INTO notes (title, content) VALUES ($1, $2) RETURNING *',
-      [title || 'Untitled', content || {}]
+      [title || 'Untitled', JSON.stringify(content || {})]
     )
     return NextResponse.json(result.rows[0])
   } catch (error) {

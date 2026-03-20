@@ -33,7 +33,7 @@ export async function PUT(
        SET title = $1, content = $2, tags = $3, updated_at = NOW()
        WHERE id = $4 
        RETURNING *`,
-      [title, content, tags || [], id]
+      [title, JSON.stringify(content), tags || [], id]
     )
     return NextResponse.json(result.rows[0])
   } catch (error) {
