@@ -1,7 +1,26 @@
-import pool from '../src/lib/db'
-import { generateEmbedding, extractTextFromContent } from '../src/lib/embeddings'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 
-async function backfill() {
+// Load env BEFORE anything else
+const envFile = readFileSync(resolve(process.cwd(), '.env.local'), 'utf8')
+envFile.split('\n').forEach(line => {
+  const trimmed = line.trim()
+  if (!trimmed || trimmed.startsWith('#')) return
+  const eqIndex = trimmed.indexOf('=')
+  if (eqIndex === -1) return
+  const key = trimmed.slice(0, eqIndex).trim()
+  const val = trimmed.slice(eqIndex + 1).trim()
+  process.env[key] = val
+})
+
+// Only import AFTER env is set
+import('pg').then(async ({ default: pg }) => {
+  const { generateEmbedding, extractTextFromContent } = await import('../src/lib/embeddings')
+  
+  const pool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL
+  })
+
   const result = await pool.query(
     'SELECT id, title, content FROM notes WHERE embedding IS NULL'
   )
@@ -33,6 +52,4 @@ async function backfill() {
 
   console.log('Done!')
   process.exit(0)
-}
-
-backfill()
+})
