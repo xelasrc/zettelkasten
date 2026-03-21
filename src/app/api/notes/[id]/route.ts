@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import pool from '@/lib/db'
+import { extractTextFromContent, generateEmbedding } from '@/lib/embeddings'
 
 export async function GET(
   request: Request,
@@ -28,12 +29,22 @@ export async function PUT(
   const { id } = await params
   try {
     const { title, content, tags } = await request.json()
+    
+    const textContent = extractTextFromContent(content)
+    const fullText = `${title} ${textContent}`.trim()
+    
+    let embedding = null
+    if (fullText) {
+      embedding = await generateEmbedding(fullText)
+    }
+
     const result = await pool.query(
       `UPDATE notes 
-       SET title = $1, content = $2, tags = $3, updated_at = NOW()
-       WHERE id = $4 
+       SET title = $1, content = $2, tags = $3, embedding = $4, updated_at = NOW()
+       WHERE id = $5 
        RETURNING *`,
-      [title, JSON.stringify(content), tags || [], id]
+      [title, JSON.stringify(content), tags || [], 
+       embedding ? JSON.stringify(embedding) : null, id]
     )
     return NextResponse.json(result.rows[0])
   } catch (error) {
