@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
+import { UserButton } from '@clerk/nextjs'
 import Link from 'next/link'
 
 interface Note {
@@ -36,12 +37,15 @@ export default function NotesPage() {
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 600 }}>My Zettelkasten</h1>
-        <button
-          onClick={createNote}
-          style={{ padding: '0.5rem 1rem', background: '#000', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-        >
-          New Note
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <UserButton />
+          <button
+            onClick={createNote}
+            style={{ padding: '0.5rem 1rem', background: '#000', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+          >
+            New Note
+          </button>
+        </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {notes.map(note => (
