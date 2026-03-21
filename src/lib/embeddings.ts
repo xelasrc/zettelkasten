@@ -12,21 +12,26 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 }
 
 export function extractTextFromContent(content: unknown): string {
-  if (!content || typeof content !== 'object') return ''
-  
-  const blocks = (content as any)
-  if (!Array.isArray(blocks)) return ''
-  
-  return blocks
-    .map((block: any) => {
-      if (block.content && Array.isArray(block.content)) {
-        return block.content
-          .filter((item: any) => item.type === 'text')
-          .map((item: any) => item.text)
-          .join(' ')
-      }
-      return ''
-    })
-    .filter(Boolean)
-    .join(' ')
+  if (!content) return ''
+
+  // Handle plain string
+  if (typeof content === 'string') return content
+
+  // Handle BlockNote array format
+  if (Array.isArray(content)) {
+    return content
+      .map((block: any) => {
+        if (block.content && Array.isArray(block.content)) {
+          return block.content
+            .filter((item: any) => item.type === 'text')
+            .map((item: any) => item.text)
+            .join(' ')
+        }
+        return ''
+      })
+      .filter(Boolean)
+      .join(' ')
+  }
+
+  return ''
 }

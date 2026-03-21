@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { UserButton } from '@clerk/nextjs'
+import Nav from '@/components/Nav'
 
 interface Note {
   id: number
@@ -45,63 +45,7 @@ export default function NotesPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', flexDirection: 'column' }}>
-      <header style={{
-        borderBottom: '1px solid #e5e5e5',
-        padding: '0 1.5rem',
-        height: '56px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        position: 'sticky',
-        top: 0,
-        background: '#fff',
-        zIndex: 10
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
-          <span style={{ fontWeight: 600, fontSize: '0.95rem', letterSpacing: '-0.01em', paddingRight: '1.5rem' }}>
-            Rhizome
-          </span>
-          <nav style={{ display: 'flex', gap: '0', borderLeft: '1px solid #e5e5e5' }}>
-            {[{ label: 'Notes', href: '/notes' }, { label: 'Graph', href: '/graph' }].map(item => (
-              <Link
-                key={item.label}
-                href={item.href}
-                style={{
-                  padding: '0 1.25rem',
-                  height: '56px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  textDecoration: 'none',
-                  fontSize: '0.85rem',
-                  color: item.label === 'Notes' ? '#0a0a0a' : '#999',
-                  borderRight: '1px solid #e5e5e5',
-                  fontWeight: item.label === 'Notes' ? 500 : 400,
-                  borderBottom: item.label === 'Notes' ? '2px solid #0a0a0a' : '2px solid transparent'
-                }}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <UserButton />
-          <button
-            onClick={createNote}
-            style={{
-              padding: '0.45rem 1rem',
-              background: '#0a0a0a',
-              color: '#fff',
-              border: 'none',
-              fontSize: '0.85rem',
-              fontWeight: 500,
-              cursor: 'pointer'
-            }}
-          >
-            + New Note
-          </button>
-        </div>
-      </header>
+      <Nav />
 
       <div style={{ display: 'flex', flex: 1 }}>
         <aside style={{
@@ -192,6 +136,24 @@ export default function NotesPage() {
               </div>
             </>
           )}
+
+          <div style={{ marginTop: '2rem', borderTop: '1px solid #e5e5e5', paddingTop: '1rem' }}>
+            <button
+              onClick={createNote}
+              style={{
+                width: '100%',
+                padding: '0.5rem 0.75rem',
+                background: '#0a0a0a',
+                color: '#fff',
+                border: 'none',
+                fontSize: '0.85rem',
+                fontWeight: 500,
+                cursor: 'pointer'
+              }}
+            >
+              + New Note
+            </button>
+          </div>
         </aside>
 
         <main style={{ flex: 1 }}>

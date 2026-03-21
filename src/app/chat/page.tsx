@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Nav from '@/components/Nav'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -47,60 +48,14 @@ export default function ChatPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', flexDirection: 'column' }}>
-      <header style={{
-        borderBottom: '1px solid #e5e5e5',
-        padding: '0 1.5rem',
-        height: '56px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        position: 'sticky',
-        top: 0,
-        background: '#fff',
-        zIndex: 10
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <span style={{ fontWeight: 600, fontSize: '0.95rem', letterSpacing: '-0.01em', paddingRight: '1.5rem' }}>
-            Rhizome
-          </span>
-          <nav style={{ display: 'flex', borderLeft: '1px solid #e5e5e5' }}>
-            {[
-              { label: 'Notes', href: '/notes' },
-              { label: 'Graph', href: '/graph' },
-              { label: 'Chat', href: '/chat' }
-            ].map(item => (
-              <Link
-                key={item.label}
-                href={item.href}
-                style={{
-                  padding: '0 1.25rem',
-                  height: '56px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  textDecoration: 'none',
-                  fontSize: '0.85rem',
-                  color: item.label === 'Chat' ? '#0a0a0a' : '#999',
-                  borderRight: '1px solid #e5e5e5',
-                  fontWeight: item.label === 'Chat' ? 500 : 400,
-                  borderBottom: item.label === 'Chat' ? '2px solid #0a0a0a' : '2px solid transparent'
-                }}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-        <p style={{ fontSize: '0.8rem', color: '#999' }}>
-          Powered by Llama 3.2 · Local
-        </p>
-      </header>
+      <Nav />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: '760px', width: '100%', margin: '0 auto', padding: '0 1.5rem' }}>
         <div style={{ flex: 1, paddingTop: '2rem', paddingBottom: '1rem' }}>
           {messages.length === 0 && (
             <div style={{ textAlign: 'center', marginTop: '4rem' }}>
               <p style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.5rem' }}>Ask your notes anything</p>
-              <p style={{ fontSize: '0.85rem', color: '#999', marginBottom: '2rem' }}>Rhizome will search your knowledge base and answer using what you've written</p>
+              <p style={{ fontSize: '0.85rem', color: '#999', marginBottom: '2rem' }}>Rhizome will search your knowledge base and answer using what you have written</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
                 {[
                   'What do I know about machine learning?',
@@ -128,11 +83,7 @@ export default function ChatPage() {
 
           {messages.map((msg, i) => (
             <div key={i} style={{ marginBottom: '1.5rem' }}>
-              <div style={{
-                display: 'flex',
-                gap: '0.75rem',
-                alignItems: 'flex-start'
-              }}>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
                 <div style={{
                   width: '24px',
                   height: '24px',
