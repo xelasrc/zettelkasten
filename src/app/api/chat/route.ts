@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
 import { generateEmbedding, extractTextFromContent } from '@/lib/embeddings'
 import pool from '@/lib/db'
 
 export async function POST(request: Request) {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const { message } = await request.json()
 
@@ -11,13 +15,13 @@ export async function POST(request: Request) {
       `SELECT id, title, content, tags,
         1 - (embedding <=> $1::vector) as similarity
        FROM notes
-       WHERE embedding IS NOT NULL
+       WHERE embedding IS NOT NULL AND user_id = $2
        ORDER BY embedding <=> $1::vector
        LIMIT 5`,
-      [JSON.stringify(embedding)]
+      [JSON.stringify(embedding), userId]
     )
 
-    const relevantNotes = result.rows.filter(n => n.similarity > 0.3)
+    const relevantNotes = result.rows.filter((n: any) => n.similarity > 0.3)
 
     const notesContext = relevantNotes.map((note: any) => {
       const text = extractTextFromContent(note.content)
