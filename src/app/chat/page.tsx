@@ -2,9 +2,10 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import Nav from '@/components/Nav'
+import Sidebar from '@/components/Nav'
+import { Send, Bot, User } from 'lucide-react'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -12,10 +13,22 @@ interface Message {
   sources?: { id: number; title: string; similarity: number }[]
 }
 
+const suggestions = [
+  'What do I know about machine learning?',
+  'Summarise my notes on neural networks',
+  'How does backpropagation relate to gradient descent?',
+  'What concepts should I explore next?'
+]
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
 
   async function sendMessage() {
     if (!input.trim() || loading) return
@@ -47,146 +60,126 @@ export default function ChatPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', flexDirection: 'column' }}>
-      <Nav />
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      <Sidebar />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: '760px', width: '100%', margin: '0 auto', padding: '0 1.5rem' }}>
-        <div style={{ flex: 1, paddingTop: '2rem', paddingBottom: '1rem' }}>
-          {messages.length === 0 && (
-            <div style={{ textAlign: 'center', marginTop: '4rem' }}>
-              <p style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.5rem' }}>Ask your notes anything</p>
-              <p style={{ fontSize: '0.85rem', color: '#999', marginBottom: '2rem' }}>Rhizome will search your knowledge base and answer using what you have written</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
-                {[
-                  'What do I know about machine learning?',
-                  'Summarise my notes on neural networks',
-                  'What concepts should I explore next?'
-                ].map(suggestion => (
-                  <button
-                    key={suggestion}
-                    onClick={() => setInput(suggestion)}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      border: '1px solid #e5e5e5',
-                      background: '#fafafa',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      color: '#555'
-                    }}
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {messages.map((msg, i) => (
-            <div key={i} style={{ marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                <div style={{
-                  width: '24px',
-                  height: '24px',
-                  background: msg.role === 'user' ? '#0a0a0a' : '#f4f4f4',
-                  border: '1px solid #e5e5e5',
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.7rem',
-                  color: msg.role === 'user' ? '#fff' : '#555',
-                  fontWeight: 600
-                }}>
-                  {msg.role === 'user' ? 'A' : 'R'}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: '0.9rem', lineHeight: 1.7, color: '#0a0a0a', whiteSpace: 'pre-wrap' }}>
-                    {msg.content}
-                  </p>
-                  {msg.sources && msg.sources.length > 0 && (
-                    <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.75rem', color: '#999' }}>Sources:</span>
-                      {msg.sources.map(source => (
-                        <Link
-                          key={source.id}
-                          href={`/notes/${source.id}`}
-                          style={{
-                            fontSize: '0.75rem',
-                            color: '#0a0a0a',
-                            textDecoration: 'none',
-                            border: '1px solid #e5e5e5',
-                            padding: '2px 8px',
-                            background: '#fafafa'
-                          }}
-                        >
-                          {source.title}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {loading && (
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
-              <div style={{
-                width: '24px',
-                height: '24px',
-                background: '#f4f4f4',
-                border: '1px solid #e5e5e5',
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.7rem',
-                color: '#555',
-                fontWeight: 600
-              }}>
-                R
-              </div>
-              <p style={{ fontSize: '0.9rem', color: '#999', marginTop: '3px' }}>Thinking...</p>
-            </div>
-          )}
+      <div className="flex-1 flex flex-col overflow-hidden bg-white">
+        {/* Header */}
+        <div className="h-14 flex items-center justify-between px-6 border-b border-gray-200 shrink-0">
+          <div>
+            <h1 className="text-sm font-semibold text-gray-900">Chat</h1>
+            <p className="text-xs text-gray-400">Ask questions about your notes · powered by Llama 3.2 locally</p>
+          </div>
         </div>
 
-        <div style={{
-          borderTop: '1px solid #e5e5e5',
-          paddingTop: '1rem',
-          paddingBottom: '1.5rem',
-          display: 'flex',
-          gap: '0.75rem'
-        }}>
-          <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-            placeholder="Ask your knowledge base..."
-            style={{
-              flex: 1,
-              padding: '0.65rem 1rem',
-              border: '1px solid #e5e5e5',
-              fontSize: '0.9rem',
-              outline: 'none',
-              background: '#fff'
-            }}
-          />
-          <button
-            onClick={sendMessage}
-            disabled={loading || !input.trim()}
-            style={{
-              padding: '0.65rem 1.25rem',
-              background: loading || !input.trim() ? '#f4f4f4' : '#0a0a0a',
-              color: loading || !input.trim() ? '#999' : '#fff',
-              border: 'none',
-              fontSize: '0.85rem',
-              fontWeight: 500,
-              cursor: loading || !input.trim() ? 'not-allowed' : 'pointer'
-            }}
-          >
-            Send
-          </button>
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="max-w-2xl mx-auto">
+            {messages.length === 0 && (
+              <div className="text-center mt-16">
+                <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <Bot size={20} className="text-gray-400" />
+                </div>
+                <h2 className="text-sm font-semibold text-gray-700 mb-1">Ask your knowledge base</h2>
+                <p className="text-xs text-gray-400 mb-8">Rhizome searches your notes and answers using what you've written</p>
+                <div className="flex flex-col gap-2 items-center">
+                  {suggestions.map(s => (
+                    <button
+                      key={s}
+                      onClick={() => setInput(s)}
+                      className="text-sm text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-4 py-2 transition-colors"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {messages.map((msg, i) => (
+              <div key={i} className="mb-6">
+                <div className="flex gap-3 items-start">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                    msg.role === 'user'
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-blue-50 text-blue-500 border border-blue-100'
+                  }`}>
+                    {msg.role === 'user'
+                      ? <User size={13} />
+                      : <Bot size={13} />
+                    }
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-gray-400 mb-1">
+                      {msg.role === 'user' ? 'You' : 'Rhizome'}
+                    </p>
+                    <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                      {msg.content}
+                    </p>
+                    {msg.sources && msg.sources.length > 0 && (
+                      <div className="mt-3 flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-gray-400">Sources:</span>
+                        {msg.sources.map(source => (
+                          <Link
+                            key={source.id}
+                            href={`/notes`}
+                            className="text-xs bg-green-50 text-green-700 border border-green-100 px-2.5 py-1 rounded-full hover:bg-green-100 transition-colors"
+                          >
+                            {source.title}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {loading && (
+              <div className="mb-6">
+                <div className="flex gap-3 items-start">
+                  <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-500 border border-blue-100 flex items-center justify-center shrink-0">
+                    <Bot size={13} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-gray-400 mb-2">Rhizome</p>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={bottomRef} />
+          </div>
+        </div>
+
+        {/* Input */}
+        <div className="border-t border-gray-200 px-6 py-4 bg-white shrink-0">
+          <div className="max-w-2xl mx-auto flex gap-3">
+            <input
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+              placeholder="Ask your knowledge base..."
+              className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none text-gray-900 placeholder-gray-400 focus:border-blue-300 focus:bg-white transition-colors"
+            />
+            <button
+              onClick={sendMessage}
+              disabled={loading || !input.trim()}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                loading || !input.trim()
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-gray-900 text-white hover:bg-gray-700'
+              }`}
+            >
+              <Send size={14} />
+              Send
+            </button>
+          </div>
         </div>
       </div>
     </div>

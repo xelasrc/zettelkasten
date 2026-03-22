@@ -7,88 +7,53 @@ export default async function Home() {
   if (userId) redirect('/notes')
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#fff',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      <header style={{
-        borderBottom: '1px solid #e5e5e5',
-        padding: '0 2rem',
-        height: '56px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <span style={{ fontWeight: 600, fontSize: '0.95rem', letterSpacing: '-0.01em' }}>
-          Rhizome
-        </span>
-        <Link href="/sign-in" style={{
-          padding: '0.4rem 1rem',
-          background: '#0a0a0a',
-          color: '#fff',
-          textDecoration: 'none',
-          fontSize: '0.85rem',
-          fontWeight: 500
-        }}>
-          Sign In
+    <div className="min-h-screen bg-white flex flex-col">
+      <header className="h-14 flex items-center justify-between px-6 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-sm text-gray-900 tracking-tight">Rhizome</span>
+          <span className="text-xs text-blue-500 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded font-medium">β</span>
+        </div>
+        <Link href="/sign-in" className="text-sm text-gray-400 hover:text-gray-900 transition-colors">
+          Sign in →
         </Link>
       </header>
 
-      <main style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '4rem 2rem'
-      }}>
-        <div style={{ maxWidth: '480px', width: '100%' }}>
-          <h1 style={{
-            fontSize: 'clamp(2.5rem, 6vw, 3.5rem)',
-            fontWeight: 700,
-            lineHeight: 1.05,
-            letterSpacing: '-0.03em',
-            marginBottom: '1.5rem',
-            color: '#0a0a0a'
-          }}>
-            Rhizome.
+      <main className="flex-1 flex items-center justify-center px-6">
+        <div className="w-full max-w-md">
+          <h1 className="text-4xl font-semibold text-gray-900 mb-4 tracking-tight">
+            Rhizome
           </h1>
 
-          <p style={{
-            fontSize: '1rem',
-            color: '#555',
-            marginBottom: '2.5rem',
-            lineHeight: 1.7,
-            maxWidth: '380px'
-          }}>
-            A Zettelkasten powered by AI. Write notes, connect ideas,
-            and chat with your own knowledge base.
+          <p className="text-base text-gray-500 leading-relaxed mb-10">
+            A self-hosted Zettelkasten with AI tagging, semantic search,
+            and a local RAG chatbot. Built on a Raspberry Pi 5.
           </p>
 
-          <Link href="/sign-in" style={{
-            display: 'inline-block',
-            padding: '0.75rem 2rem',
-            background: '#0a0a0a',
-            color: '#fff',
-            textDecoration: 'none',
-            fontSize: '0.9rem',
-            fontWeight: 500
-          }}>
-            Get Started →
+          <div className="flex flex-col gap-4 mb-12">
+            {[
+              { color: 'bg-blue-500', label: 'AI-powered tagging and connections' },
+              { color: 'bg-green-500', label: 'Local RAG chatbot - runs on device' },
+              { color: 'bg-red-400', label: 'Self-hosted - your data stays yours' },
+            ].map(item => (
+              <div key={item.label} className="flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full ${item.color} shrink-0`} />
+                <p className="text-sm text-gray-500">{item.label}</p>
+              </div>
+            ))}
+          </div>
+
+          <Link
+            href="/sign-in"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Sign in to Rhizome
           </Link>
         </div>
       </main>
 
-      <footer style={{
-        borderTop: '1px solid #e5e5e5',
-        padding: '1.25rem 2rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <span style={{ fontSize: '0.8rem', color: '#999' }}>Alexander Wells</span>
-        <span style={{ fontSize: '0.8rem', color: '#999' }}>Self-hosted on Raspberry Pi 5</span>
+      <footer className="h-12 flex items-center justify-between px-6 border-t border-gray-100">
+        <span className="text-xs text-gray-400 whitespace-nowrap">Alexander Wells</span>
+        <span className="text-xs text-gray-400 whitespace-nowrap">Self-hosted · Raspberry Pi 5</span>
       </footer>
     </div>
   )

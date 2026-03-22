@@ -2,22 +2,53 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import Nav from '@/components/Nav'
+import { useEffect, useState, useCallback } from 'react'
+import nextDynamic from 'next/dynamic'
+import Sidebar from '@/components/Nav'
+import { Search, X, FileText, Trash2, Plus } from 'lucide-react'
+
+const Editor = nextDynamic(() => import('@/components/Editor'), { ssr: false })
 
 interface Note {
   id: number
   title: string
   tags: string[]
+  content: unknown
   created_at: string
   updated_at: string
+}
+
+interface OpenTab {
+  id: number | null
+  title: string
+  content: unknown
+  tags: string[]
+  isDirty: boolean
+  saving: boolean
+  saved: boolean
+  _key: number
+}
+
+let tabCounter = 0
+
+function makeEmptyTab(): OpenTab {
+  return {
+    _key: ++tabCounter,
+    id: null,
+    title: 'New tab',
+    content: null,
+    tags: [],
+    isDirty: false,
+    saving: false,
+    saved: false
+  }
 }
 
 export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([])
   const [search, setSearch] = useState('')
-  const [selectedTag, setSelectedTag] = useState<string | null>(null)
+  const [tabs, setTabs] = useState<OpenTab[]>(() => [makeEmptyTab()])
+  const [activeKey, setActiveKey] = useState<number>(1)
 
   useEffect(() => {
     fetch('/api/notes')
@@ -25,215 +56,231 @@ export default function NotesPage() {
       .then(setNotes)
   }, [])
 
-  async function createNote() {
-    const res = await fetch('/api/notes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'Untitled', content: {} })
-    })
-    const note = await res.json()
-    window.location.href = `/notes/${note.id}`
+  function createTab() {
+    const tab = makeEmptyTab()
+    setTabs(prev => [...prev, tab])
+    setActiveKey(tab._key)
   }
 
-  const allTags = Array.from(new Set(notes.flatMap(n => n.tags)))
+  async function openNoteInActiveTab(note: Note) {
+    const res = await fetch(`/api/notes/${note.id}`)
+    const full = await res.json()
+    setTabs(prev => prev.map(t =>
+      t._key === activeKey
+        ? { ...t, id: full.id, title: full.title, content: full.content, tags: full.tags, isDirty: false, saved: false }
+        : t
+    ))
+  }
 
-  const filtered = notes.filter(note => {
-    const matchesSearch = note.title.toLowerCase().includes(search.toLowerCase())
-    const matchesTag = selectedTag ? note.tags.includes(selectedTag) : true
-    return matchesSearch && matchesTag
-  })
+  function closeTab(key: number, e: React.MouseEvent) {
+    e.stopPropagation()
+    setTabs(prev => {
+      const remaining = prev.filter(t => t._key !== key)
+      if (remaining.length === 0) {
+        const fresh = makeEmptyTab()
+        setActiveKey(fresh._key)
+        return [fresh]
+      }
+      if (activeKey === key) {
+        setActiveKey(remaining[remaining.length - 1]._key)
+      }
+      return remaining
+    })
+  }
+
+  async function deleteNote(id: number) {
+    if (!confirm('Delete this note?')) return
+    await fetch(`/api/notes/${id}`, { method: 'DELETE' })
+    setNotes(prev => prev.filter(n => n.id !== id))
+    setTabs(prev => prev.map(t =>
+      t.id === id ? { ...makeEmptyTab(), _key: t._key } : t
+    ))
+  }
+
+  const saveTab = useCallback(async (key: number) => {
+    const tab = tabs.find(t => t._key === key)
+    if (!tab || !tab.id) return
+    setTabs(prev => prev.map(t => t._key === key ? { ...t, saving: true } : t))
+    await fetch(`/api/notes/${tab.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: tab.title, content: tab.content, tags: tab.tags })
+    })
+    setNotes(prev => prev.map(n => n.id === tab.id ? { ...n, title: tab.title, tags: tab.tags } : n))
+    setTabs(prev => prev.map(t => t._key === key ? { ...t, saving: false, saved: true, isDirty: false } : t))
+    setTimeout(() => {
+      setTabs(prev => prev.map(t => t._key === key ? { ...t, saved: false } : t))
+    }, 2000)
+  }, [tabs])
+
+  const updateContent = useCallback((content: unknown) => {
+    setTabs(prev => prev.map(t => t._key === activeKey ? { ...t, content, isDirty: true } : t))
+  }, [activeKey])
+
+  const updateTitle = useCallback((title: string) => {
+    setTabs(prev => prev.map(t => t._key === activeKey ? { ...t, title, isDirty: true } : t))
+  }, [activeKey])
+
+  const filtered = notes.filter(note =>
+    note.title.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const activeTab = tabs.find(t => t._key === activeKey) ?? null
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', flexDirection: 'column' }}>
-      <Nav />
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      <Sidebar />
 
-      <div style={{ display: 'flex', flex: 1 }}>
-        <aside style={{
-          width: '220px',
-          borderRight: '1px solid #e5e5e5',
-          padding: '1.5rem 1rem',
-          flexShrink: 0,
-          position: 'sticky',
-          top: '56px',
-          height: 'calc(100vh - 56px)',
-          overflowY: 'auto'
-        }}>
-          <input
-            placeholder="Search..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.5rem 0.75rem',
-              border: '1px solid #e5e5e5',
-              fontSize: '0.85rem',
-              outline: 'none',
-              marginBottom: '1.5rem',
-              color: '#0a0a0a',
-              background: '#fafafa'
-            }}
-          />
+      {/* Notes list column */}
+      <div className="flex flex-col w-60 border-r border-gray-200 shrink-0 overflow-hidden bg-white">
 
-          <p style={{
-            fontSize: '0.7rem',
-            letterSpacing: '0.08em',
-            color: '#999',
-            marginBottom: '0.5rem',
-            textTransform: 'uppercase'
-          }}>
-            All Notes
+        {/* Search */}
+        <div className="h-14 flex items-center px-3 border-b border-gray-200 shrink-0">
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 flex-1">
+            <Search size={13} className="text-gray-400 shrink-0" />
+            <input
+              placeholder="Search..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="flex-1 bg-transparent text-sm outline-none text-gray-900 placeholder-gray-400"
+            />
+          </div>
+        </div>
+
+        {/* Notes list */}
+        <div className="flex-1 overflow-y-auto">
+          <p className="text-xs text-gray-400 uppercase tracking-wider px-3 pt-3 pb-1.5 font-medium">
+            {filtered.length} notes
           </p>
-          <button
-            onClick={() => setSelectedTag(null)}
-            style={{
-              width: '100%',
-              textAlign: 'left',
-              padding: '0.4rem 0.75rem',
-              border: 'none',
-              background: selectedTag === null ? '#f4f4f4' : 'transparent',
-              color: selectedTag === null ? '#0a0a0a' : '#555',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              fontWeight: selectedTag === null ? 500 : 400,
-              borderLeft: selectedTag === null ? '2px solid #0a0a0a' : '2px solid transparent',
-              marginBottom: '1rem'
-            }}
-          >
-            All ({notes.length})
-          </button>
-
-          {allTags.length > 0 && (
-            <>
-              <p style={{
-                fontSize: '0.7rem',
-                letterSpacing: '0.08em',
-                color: '#999',
-                marginBottom: '0.5rem',
-                textTransform: 'uppercase'
-              }}>
-                Tags
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
-                {allTags.map(tag => (
-                  <button
-                    key={tag}
-                    onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
-                    style={{
-                      textAlign: 'left',
-                      padding: '0.4rem 0.75rem',
-                      border: 'none',
-                      background: selectedTag === tag ? '#f4f4f4' : 'transparent',
-                      color: selectedTag === tag ? '#0a0a0a' : '#555',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      fontWeight: selectedTag === tag ? 500 : 400,
-                      borderLeft: selectedTag === tag ? '2px solid #0a0a0a' : '2px solid transparent'
-                    }}
-                  >
-                    # {tag}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-
-          <div style={{ marginTop: '2rem', borderTop: '1px solid #e5e5e5', paddingTop: '1rem' }}>
+          {filtered.map(note => (
             <button
-              onClick={createNote}
-              style={{
-                width: '100%',
-                padding: '0.5rem 0.75rem',
-                background: '#0a0a0a',
-                color: '#fff',
-                border: 'none',
-                fontSize: '0.85rem',
-                fontWeight: 500,
-                cursor: 'pointer'
-              }}
+              key={note.id}
+              onClick={() => openNoteInActiveTab(note)}
+              className={`w-full text-left px-3 py-2.5 border-b border-gray-100 hover:bg-gray-50 transition-colors group ${
+                activeTab?.id === note.id ? 'bg-blue-50 border-l-2 border-l-blue-400' : ''
+              }`}
             >
-              + New Note
+              <p className={`text-sm truncate font-medium ${
+                activeTab?.id === note.id ? 'text-blue-700' : 'text-gray-800'
+              }`}>
+                {note.title}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {new Date(note.updated_at).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short' })}
+              </p>
+            </button>
+          ))}
+          {filtered.length === 0 && (
+            <div className="px-3 py-8 text-center">
+              <p className="text-sm text-gray-400">No notes found</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Main area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+
+        {/* Tab bar */}
+        <div className="flex items-center border-b border-gray-200 bg-white shrink-0 h-10">
+          <div className="flex items-center overflow-x-auto flex-1">
+            {tabs.map(tab => (
+              <button
+                key={tab._key}
+                onClick={() => setActiveKey(tab._key)}
+                className={`relative flex items-center gap-2 px-4 h-10 border-r border-gray-200 text-xs shrink-0 transition-colors group ${
+                  activeKey === tab._key
+                    ? 'bg-gray-50 text-gray-900 font-medium'
+                    : 'text-gray-400 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {activeKey === tab._key && (
+                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-500" />
+                )}
+                <span className="max-w-28 truncate">{tab.title}</span>
+                {tab.isDirty && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                )}
+                <span
+                  onClick={(e) => closeTab(tab._key, e)}
+                  className="opacity-0 group-hover:opacity-100 hover:bg-gray-200 rounded p-0.5 transition-all cursor-pointer ml-0.5"
+                >
+                  <X size={10} />
+                </span>
+              </button>
+            ))}
+
+            <button
+              onClick={createTab}
+              className="flex items-center justify-center w-8 h-8 ml-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+            >
+              <Plus size={14} />
             </button>
           </div>
-        </aside>
 
-        <main style={{ flex: 1 }}>
-          <div style={{
-            padding: '1rem 1.5rem',
-            borderBottom: '1px solid #e5e5e5',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <p style={{ fontSize: '0.8rem', color: '#999' }}>
-              {filtered.length} {filtered.length === 1 ? 'note' : 'notes'}
-              {selectedTag && ` tagged #${selectedTag}`}
-            </p>
-          </div>
+          {activeTab?.id && (
+            <div className="flex items-center shrink-0 h-full border-l border-gray-200">
+              <span className="text-xs px-3 hidden sm:block">
+                {activeTab.saving
+                  ? <span className="text-amber-500">Saving...</span>
+                  : activeTab.saved
+                  ? <span className="text-green-500">Saved ✓</span>
+                  : <span className="text-gray-300">Unsaved</span>
+                }
+              </span>
+              <button
+                onClick={() => saveTab(activeKey)}
+                className="text-xs px-3 h-full hover:bg-gray-50 text-gray-500 hover:text-gray-900 transition-colors border-l border-gray-200 font-medium"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => deleteNote(activeTab.id!)}
+                className="px-3 h-full hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors border-l border-gray-200"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          )}
+        </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {filtered.map(note => (
-              <Link key={note.id} href={`/notes/${note.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div
-                  style={{
-                    padding: '1rem 1.5rem',
-                    borderBottom: '1px solid #e5e5e5',
-                    cursor: 'pointer',
-                    background: '#fff',
-                    transition: 'background 0.1s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '1rem'
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
-                  onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
-                    <h3 style={{
-                      fontSize: '0.9rem',
-                      fontWeight: 500,
-                      color: '#0a0a0a',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}>
-                      {note.title}
-                    </h3>
-                    {note.tags.length > 0 && (
-                      <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
-                        {note.tags.slice(0, 3).map(tag => (
-                          <span key={tag} style={{
-                            fontSize: '0.7rem',
-                            background: '#f4f4f4',
-                            color: '#555',
-                            padding: '2px 8px',
-                            border: '1px solid #e5e5e5'
-                          }}>
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <p style={{ fontSize: '0.75rem', color: '#999', flexShrink: 0 }}>
-                    {new Date(note.updated_at).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short' })}
-                  </p>
+        {/* Note content */}
+        <div className="flex-1 overflow-y-auto bg-white">
+          {activeTab?.id ? (
+            <div className="px-10 py-8 max-w-4xl">
+              <input
+                value={activeTab.title}
+                onChange={e => updateTitle(e.target.value)}
+                className="w-full text-3xl font-bold text-gray-900 outline-none mb-3 bg-transparent placeholder-gray-200"
+                placeholder="Untitled"
+              />
+              {activeTab.tags.length > 0 && (
+                <div className="flex gap-2 mb-6 flex-wrap">
+                  {activeTab.tags.map(tag => (
+                    <span key={tag} className="text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full border border-gray-200">
+                      #{tag}
+                    </span>
+                  ))}
                 </div>
-              </Link>
-            ))}
-            {filtered.length === 0 && (
-              <div style={{
-                textAlign: 'center',
-                padding: '4rem 2rem',
-                color: '#999',
-                borderBottom: '1px solid #e5e5e5'
-              }}>
-                <p style={{ marginBottom: '0.5rem', fontWeight: 500, color: '#555' }}>No notes yet</p>
-                <p style={{ fontSize: '0.85rem' }}>Create your first note to get started</p>
+              )}
+              <Editor
+                key={activeTab.id}
+                initialContent={activeTab.content}
+                onChange={updateContent}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center">
+                <FileText size={20} className="text-gray-400" />
               </div>
-            )}
-          </div>
-        </main>
+              <div>
+                <p className="text-sm font-medium text-gray-500">New tab</p>
+                <p className="text-xs text-gray-400 mt-0.5">Select a note from the list to open it</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

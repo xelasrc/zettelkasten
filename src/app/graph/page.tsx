@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
-import Nav from '@/components/Nav'
+import Sidebar from '@/components/Nav'
 import { useRouter } from 'next/navigation'
 
 interface Note {
@@ -57,18 +57,16 @@ export default function GraphPage() {
     }
 
     const simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(links).distance(120).strength(0.5))
-      .force('charge', d3.forceManyBody().strength(-300))
+      .force('link', d3.forceLink(links).distance(140).strength(0.5))
+      .force('charge', d3.forceManyBody().strength(-350))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide(40))
+      .force('collision', d3.forceCollide(45))
 
     const g = svg.append('g')
 
     const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.3, 3])
-      .on('zoom', (event) => {
-        g.attr('transform', event.transform)
-      })
+      .scaleExtent([0.2, 3])
+      .on('zoom', (event) => g.attr('transform', event.transform))
 
     svg.call(zoom)
 
@@ -76,7 +74,7 @@ export default function GraphPage() {
       .selectAll('line')
       .data(links)
       .join('line')
-      .attr('stroke', '#e5e5e5')
+      .attr('stroke', '#e2e8f0')
       .attr('stroke-width', d => d.strength + 0.5)
 
     const node = g.append('g')
@@ -86,7 +84,7 @@ export default function GraphPage() {
       .style('cursor', 'pointer')
       .on('mouseenter', (_, d) => setHoveredNote(d))
       .on('mouseleave', () => setHoveredNote(null))
-      .on('click', (_, d) => router.push(`/notes/${d.id}`))
+      .on('click', (_, d) => router.push(`/notes?open=${d.id}`))
       .call(
         d3.drag<SVGGElement, GraphNode>()
           .on('start', (event, d) => {
@@ -106,18 +104,20 @@ export default function GraphPage() {
       )
 
     node.append('circle')
-      .attr('r', d => 6 + d.tags.length * 2)
-      .attr('fill', '#0a0a0a')
+      .attr('r', d => 7 + d.tags.length * 2)
+      .attr('fill', '#1e40af')
       .attr('stroke', '#fff')
       .attr('stroke-width', 2)
+      .attr('opacity', 0.85)
 
     node.append('text')
-      .text(d => d.title.length > 20 ? d.title.slice(0, 20) + '…' : d.title)
+      .text(d => d.title.length > 22 ? d.title.slice(0, 22) + '…' : d.title)
       .attr('x', 0)
-      .attr('y', d => -(10 + d.tags.length * 2))
+      .attr('y', d => -(12 + d.tags.length * 2))
       .attr('text-anchor', 'middle')
       .attr('font-size', '11px')
-      .attr('fill', '#555')
+      .attr('font-family', 'Inter, system-ui, sans-serif')
+      .attr('fill', '#374151')
       .attr('pointer-events', 'none')
 
     simulation.on('tick', () => {
@@ -126,7 +126,6 @@ export default function GraphPage() {
         .attr('y1', d => (d.source as GraphNode).y!)
         .attr('x2', d => (d.target as GraphNode).x!)
         .attr('y2', d => (d.target as GraphNode).y!)
-
       node.attr('transform', d => `translate(${d.x},${d.y})`)
     })
 
@@ -134,72 +133,49 @@ export default function GraphPage() {
   }, [notes, router])
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', flexDirection: 'column' }}>
-      <Nav />
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      <Sidebar />
 
-      <div style={{ flex: 1, position: 'relative' }}>
-        <div style={{
-          position: 'absolute',
-          top: '1rem',
-          right: '1.5rem',
-          fontSize: '0.8rem',
-          color: '#999',
-          zIndex: 5,
-          pointerEvents: 'none'
-        }}>
-          {notes.length} notes · scroll to zoom · drag to pan
+      <div className="flex-1 flex flex-col overflow-hidden bg-white">
+        {/* Header */}
+        <div className="h-14 flex items-center justify-between px-6 border-b border-gray-200 shrink-0">
+          <div>
+            <h1 className="text-sm font-semibold text-gray-900">Knowledge Graph</h1>
+            <p className="text-xs text-gray-400">{notes.length} notes · connected by shared tags</p>
+          </div>
+          <p className="text-xs text-gray-400">Scroll to zoom · drag to pan</p>
         </div>
 
-        <svg
-          ref={svgRef}
-          style={{ width: '100%', height: 'calc(100vh - 56px)', display: 'block' }}
-        />
+        {/* Graph */}
+        <div className="flex-1 relative">
+          <svg
+            ref={svgRef}
+            className="w-full h-full block"
+          />
 
-        {hoveredNote && (
-          <div style={{
-            position: 'absolute',
-            bottom: '1.5rem',
-            left: '1.5rem',
-            background: '#fff',
-            border: '1px solid #e5e5e5',
-            padding: '1rem 1.25rem',
-            maxWidth: '280px',
-            pointerEvents: 'none'
-          }}>
-            <p style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.5rem' }}>{hoveredNote.title}</p>
-            {hoveredNote.tags.length > 0 && (
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                {hoveredNote.tags.map(tag => (
-                  <span key={tag} style={{
-                    fontSize: '0.7rem',
-                    background: '#f4f4f4',
-                    color: '#555',
-                    padding: '2px 8px',
-                    border: '1px solid #e5e5e5'
-                  }}>
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            )}
-            <p style={{ fontSize: '0.75rem', color: '#999', marginTop: '0.5rem' }}>Click to open</p>
-          </div>
-        )}
+          {hoveredNote && (
+            <div className="absolute bottom-6 left-6 bg-white border border-gray-200 rounded-lg p-4 max-w-xs shadow-sm pointer-events-none">
+              <p className="font-semibold text-sm text-gray-900 mb-2">{hoveredNote.title}</p>
+              {hoveredNote.tags.length > 0 && (
+                <div className="flex gap-1.5 flex-wrap">
+                  {hoveredNote.tags.map(tag => (
+                    <span key={tag} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-gray-400 mt-2">Click to open note</p>
+            </div>
+          )}
 
-        {notes.length > 0 && notes.every(n => n.tags.length === 0) && (
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            textAlign: 'center',
-            color: '#999',
-            pointerEvents: 'none'
-          }}>
-            <p style={{ fontWeight: 500, color: '#555', marginBottom: '0.5rem' }}>No connections yet</p>
-            <p style={{ fontSize: '0.85rem' }}>Add tags to your notes to see them connect</p>
-          </div>
-        )}
+          {notes.length > 0 && notes.every(n => n.tags.length === 0) && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+              <p className="text-sm font-medium text-gray-400 mb-1">No connections yet</p>
+              <p className="text-xs text-gray-300">Add tags to your notes using AI Tags to see them connect</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
