@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
 import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({
@@ -6,9 +7,11 @@ const client = new Anthropic({
 })
 
 export async function POST(request: Request) {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const { title, content } = await request.json()
-
     const contentText = JSON.stringify(content)
 
     const message = await client.messages.create({
@@ -37,7 +40,7 @@ Respond with only the JSON object.`
     const responseText = message.content[0].type === 'text' ? message.content[0].text : ''
     const cleaned = responseText.replace(/```json\n?|\n?```/g, '').trim()
     const suggestions = JSON.parse(cleaned)
-    
+
     return NextResponse.json(suggestions)
   } catch (error) {
     console.error('Error generating tags:', error)
