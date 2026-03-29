@@ -49,8 +49,8 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         minQueryLength={0}
         shouldOpen={(tr) => {
           const { from } = tr.selection
-          const charBeforeTrigger = tr.doc.textBetween(Math.max(0, from - 2), Math.max(0, from - 1), '')
-          return charBeforeTrigger === '['
+          const charBeforeCursor = tr.doc.textBetween(Math.max(0, from - 1), from, '')
+          return charBeforeCursor === '['
         }}
         getItems={async (query) => {
           return noteTitles
