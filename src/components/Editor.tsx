@@ -46,10 +46,12 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     <BlockNoteView editor={editor} theme="light">
       <SuggestionMenuController
         triggerCharacter="["
-        minQueryLength={0}
+        minQueryLength={1}
         getItems={async (query) => {
+          if (!query.startsWith('[')) return []
+          const search = query.slice(1)
           return noteTitles
-            .filter(t => t.toLowerCase().includes(query.toLowerCase()))
+            .filter(t => t.toLowerCase().includes(search.toLowerCase()))
             .slice(0, 10)
             .map(title => ({
               title,
