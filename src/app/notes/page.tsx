@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import nextDynamic from 'next/dynamic'
 import Sidebar from '@/components/Nav'
 import { Search, X, FileText, Trash2, Plus, FilePlus, ArrowUpDown, Sparkles, Tag } from 'lucide-react'
@@ -59,6 +60,7 @@ function makeEmptyTab(): OpenTab {
 }
 
 export default function NotesPage() {
+  const router = useRouter()
   const [notes, setNotes] = useState<Note[]>([])
   const [search, setSearch] = useState('')
   const [searchMode, setSearchMode] = useState<SearchMode>('title')
@@ -68,10 +70,17 @@ export default function NotesPage() {
   const [activeKey, setActiveKey] = useState<number>(1)
 
   useEffect(() => {
-    fetch('/api/notes')
-      .then(res => res.json())
-      .then(setNotes)
-  }, [])
+    fetch('/api/notes').then(res => {
+      if (res.status === 401) { router.push('/sign-in'); return }
+      res.json().then(setNotes)
+    })
+  }, [router])
+  
+  useEffect(() => {
+    if (tabs.length > 0 && !tabs.find(t => t._key === activeKey)) {
+      setActiveKey(tabs[tabs.length - 1]._key)
+    }
+  }, [tabs, activeKey])
 
   function createTab() {
     const tab = makeEmptyTab()
@@ -130,7 +139,9 @@ export default function NotesPage() {
         return [fresh]
       }
       if (activeKey === key) {
-        setActiveKey(remaining[remaining.length - 1]._key)
+        const currentIndex = prev.findIndex(t => t._key === key)
+        const nextTab = prev[currentIndex + 1] ?? prev[currentIndex - 1]
+        setActiveKey(nextTab._key)
       }
       return remaining
     })
@@ -192,6 +203,10 @@ export default function NotesPage() {
       body: JSON.stringify({ title: tab.title, content: tab.content })
     })
     const data = await res.json()
+    if (!res.ok || data.error) {
+      setTabs(prev => prev.map(t => t._key === key ? { ...t, tagging: false } : t))
+      return
+    }
     setTabs(prev => prev.map(t => t._key === key ? { ...t, tagging: false, suggestions: data } : t))
   }, [tabs])
 

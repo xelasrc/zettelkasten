@@ -37,11 +37,12 @@ ${notesContext}
 USER QUESTION: ${message}`
       : `You are a helpful assistant for a personal knowledge base called Rhizome. The user asked: "${message}". There are no relevant notes in their knowledge base about this topic. Tell them this and suggest they create a note about it.`
 
-    const ollamaResponse = await fetch('http://localhost:11434/api/generate', {
+    const ollamaUrl = process.env.OLLAMA_URL ?? 'http://localhost:11434'
+    const ollamaResponse = await fetch(`${ollamaUrl}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama3.2:3b',
+        model: process.env.OLLAMA_CHAT_MODEL ?? 'llama3.2:3b',
         prompt,
         stream: false
       })

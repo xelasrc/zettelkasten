@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
-import { FileText, GitBranch, MessageSquare, Settings } from 'lucide-react'
+import { FileText, GitBranch, MessageSquare } from 'lucide-react'
 
 const navItems = [
   { label: 'Notes', href: '/notes', icon: FileText },
@@ -42,11 +42,8 @@ export default function Sidebar() {
           })}
         </nav>
 
-        <div className="p-3 border-t border-gray-200 flex items-center justify-between">
+        <div className="p-3 border-t border-gray-200 flex items-center">
           <UserButton />
-          <Link href="/settings" className="text-gray-400 hover:text-gray-600 transition-colors">
-            <Settings size={15} />
-          </Link>
         </div>
       </aside>
 
