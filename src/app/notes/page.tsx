@@ -538,7 +538,7 @@ export default function NotesPage() {
                     {activeTab.backlinks.map(bl => (
                       <button
                         key={bl.id}
-                        onClick={() => { const n = notes.find(n => n.id === bl.id); if (n) openNoteInActiveTab(n) }}
+                        onClick={() => openNoteByTitle(bl.title)}
                         className="text-left text-sm text-blue-600 hover:text-blue-800 hover:underline"
                       >
                         ← {bl.title}
