@@ -236,9 +236,23 @@ export default function NotesPage() {
   const noteTitleSet = new Set(notes.map(n => n.title))
   const activeWikilinks = activeTab?.content ? extractWikilinks(activeTab.content) : []
 
-  function openNoteByTitle(title: string) {
+  async function openNoteByTitle(title: string) {
     const note = notes.find(n => n.title === title)
-    if (note) openNoteInActiveTab(note)
+    if (!note) return
+    const tab = makeEmptyTab()
+    setTabs(prev => [...prev, tab])
+    setActiveKey(tab._key)
+    const [noteRes, backlinksRes] = await Promise.all([
+      fetch(`/api/notes/${note.id}`),
+      fetch(`/api/notes/${note.id}/backlinks`)
+    ])
+    const full = await noteRes.json()
+    const backlinks = backlinksRes.ok ? await backlinksRes.json() : []
+    setTabs(prev => prev.map(t =>
+      t._key === tab._key
+        ? { ...t, id: full.id, title: full.title, content: full.content, isDirty: false, saved: false, suggestions: null, backlinks }
+        : t
+    ))
   }
 
   return (
@@ -524,7 +538,7 @@ export default function NotesPage() {
                     {activeTab.backlinks.map(bl => (
                       <button
                         key={bl.id}
-                        onClick={() => openNoteInActiveTab(notes.find(n => n.id === bl.id)!)}
+                        onClick={() => { const n = notes.find(n => n.id === bl.id); if (n) openNoteInActiveTab(n) }}
                         className="text-left text-sm text-blue-600 hover:text-blue-800 hover:underline"
                       >
                         ← {bl.title}
