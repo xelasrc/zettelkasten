@@ -10,13 +10,13 @@ import { useRouter } from 'next/navigation'
 interface Note {
   id: number
   title: string
-  tags: string[]
+  links: string[]
 }
 
 interface GraphNode extends d3.SimulationNodeDatum {
   id: number
   title: string
-  tags: string[]
+  links: string[]
 }
 
 interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
@@ -45,19 +45,20 @@ export default function GraphPage() {
     const height = svgRef.current.clientHeight
 
     const nodes: GraphNode[] = notes.map(n => ({ ...n }))
+    const titleToId = new Map(nodes.map(n => [n.title, n.id]))
 
     const links: GraphLink[] = []
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const sharedTags = nodes[i].tags.filter(t => nodes[j].tags.includes(t))
-        if (sharedTags.length > 0) {
-          links.push({ source: nodes[i], target: nodes[j], strength: sharedTags.length })
+    for (const node of nodes) {
+      for (const linkedTitle of node.links) {
+        const targetId = titleToId.get(linkedTitle)
+        if (targetId !== undefined && targetId !== node.id) {
+          links.push({ source: node.id, target: targetId, strength: 1 })
         }
       }
     }
 
     const simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(links).distance(140).strength(0.5))
+      .force('link', d3.forceLink(links).id((d: any) => d.id).distance(140).strength(0.5))
       .force('charge', d3.forceManyBody().strength(-350))
       .force('center', d3.forceCenter(width / 2, height / 2))
       .force('collision', d3.forceCollide(45))
@@ -75,7 +76,7 @@ export default function GraphPage() {
       .data(links)
       .join('line')
       .attr('stroke', '#e2e8f0')
-      .attr('stroke-width', d => d.strength + 0.5)
+      .attr('stroke-width', 1.5)
 
     const node = g.append('g')
       .selectAll('g')
@@ -104,7 +105,7 @@ export default function GraphPage() {
       )
 
     node.append('circle')
-      .attr('r', d => 7 + d.tags.length * 2)
+      .attr('r', d => 7 + d.links.length * 2)
       .attr('fill', '#1e40af')
       .attr('stroke', '#fff')
       .attr('stroke-width', 2)
@@ -113,7 +114,7 @@ export default function GraphPage() {
     node.append('text')
       .text(d => d.title.length > 22 ? d.title.slice(0, 22) + '…' : d.title)
       .attr('x', 0)
-      .attr('y', d => -(12 + d.tags.length * 2))
+      .attr('y', d => -(12 + d.links.length * 2))
       .attr('text-anchor', 'middle')
       .attr('font-size', '11px')
       .attr('font-family', 'Inter, system-ui, sans-serif')
@@ -137,30 +138,25 @@ export default function GraphPage() {
       <Sidebar />
 
       <div className="flex-1 flex flex-col overflow-hidden bg-white">
-        {/* Header */}
         <div className="h-14 flex items-center justify-between px-6 border-b border-gray-200 shrink-0">
           <div>
             <h1 className="text-sm font-semibold text-gray-900">Knowledge Graph</h1>
-            <p className="text-xs text-gray-400">{notes.length} notes · connected by shared tags</p>
+            <p className="text-xs text-gray-400">{notes.length} notes · connected by [[wikilinks]]</p>
           </div>
           <p className="text-xs text-gray-400">Scroll to zoom · drag to pan</p>
         </div>
 
-        {/* Graph */}
         <div className="flex-1 relative">
-          <svg
-            ref={svgRef}
-            className="w-full h-full block"
-          />
+          <svg ref={svgRef} className="w-full h-full block" />
 
           {hoveredNote && (
             <div className="absolute bottom-6 left-6 bg-white border border-gray-200 rounded-lg p-4 max-w-xs shadow-sm pointer-events-none">
               <p className="font-semibold text-sm text-gray-900 mb-2">{hoveredNote.title}</p>
-              {hoveredNote.tags.length > 0 && (
+              {hoveredNote.links.length > 0 && (
                 <div className="flex gap-1.5 flex-wrap">
-                  {hoveredNote.tags.map(tag => (
-                    <span key={tag} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100">
-                      #{tag}
+                  {hoveredNote.links.map(link => (
+                    <span key={link} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100">
+                      [[{link}]]
                     </span>
                   ))}
                 </div>
@@ -169,10 +165,10 @@ export default function GraphPage() {
             </div>
           )}
 
-          {notes.length > 0 && notes.every(n => n.tags.length === 0) && (
+          {notes.length > 0 && notes.every(n => n.links.length === 0) && (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
               <p className="text-sm font-medium text-gray-400 mb-1">No connections yet</p>
-              <p className="text-xs text-gray-300">Add tags to your notes using AI Tags to see them connect</p>
+              <p className="text-xs text-gray-300">Type [[Note Title]] in your notes to connect them</p>
             </div>
           )}
         </div>

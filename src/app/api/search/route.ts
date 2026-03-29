@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const embedding = await generateEmbedding(query)
 
     const result = await pool.query(
-      `SELECT id, title, content, tags,
+      `SELECT id, title, content,
         1 - (embedding <=> $1::vector) as similarity
        FROM notes
        WHERE embedding IS NOT NULL AND user_id = $2

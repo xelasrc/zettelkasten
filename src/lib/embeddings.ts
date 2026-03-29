@@ -12,6 +12,11 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   return data.embedding
 }
 
+export function extractWikilinks(content: unknown): string[] {
+  const text = extractTextFromContent(content)
+  return [...text.matchAll(/\[\[([^\]]+)\]\]/g)].map(m => m[1])
+}
+
 export function extractTextFromContent(content: unknown): string {
   if (!content) return ''
 

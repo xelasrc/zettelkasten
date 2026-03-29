@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import pool from '@/lib/db'
-import { generateEmbedding, extractTextFromContent } from '@/lib/embeddings'
+import { generateEmbedding, extractTextFromContent, extractWikilinks } from '@/lib/embeddings'
 
 export async function GET(
   request: Request,
@@ -35,10 +35,11 @@ export async function PUT(
 
   const { id } = await params
   try {
-    const { title, content, tags } = await request.json()
+    const { title, content } = await request.json()
 
     const textContent = extractTextFromContent(content)
     const fullText = `${title} ${textContent}`.trim()
+    const links = extractWikilinks(content)
 
     let embedding = null
     if (fullText) {
@@ -47,10 +48,10 @@ export async function PUT(
 
     const result = await pool.query(
       `UPDATE notes
-       SET title = $1, content = $2, tags = $3, embedding = $4, updated_at = NOW()
+       SET title = $1, content = $2, links = $3, embedding = $4, updated_at = NOW()
        WHERE id = $5 AND user_id = $6
        RETURNING *`,
-      [title, JSON.stringify(content), tags || [], embedding ? JSON.stringify(embedding) : null, id, userId]
+      [title, JSON.stringify(content), links, embedding ? JSON.stringify(embedding) : null, id, userId]
     )
     if (result.rows.length === 0) {
       return NextResponse.json({ error: 'Note not found' }, { status: 404 })
