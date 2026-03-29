@@ -8,6 +8,7 @@ import nextDynamic from 'next/dynamic'
 import Sidebar from '@/components/Nav'
 import type { EditorHandle } from '@/components/Editor'
 import { Search, X, FileText, Trash2, Plus, FilePlus, ArrowUpDown, Link2 } from 'lucide-react'
+import { extractWikilinks } from '@/lib/embeddings'
 
 const Editor = nextDynamic(() => import('@/components/Editor'), { ssr: false })
 
@@ -232,6 +233,13 @@ export default function NotesPage() {
 
   const activeTab = tabs.find(t => t._key === activeKey) ?? null
   const noteTitles = notes.filter(n => n.id !== activeTab?.id).map(n => n.title)
+  const noteTitleSet = new Set(notes.map(n => n.title))
+  const activeWikilinks = activeTab?.content ? extractWikilinks(activeTab.content) : []
+
+  function openNoteByTitle(title: string) {
+    const note = notes.find(n => n.title === title)
+    if (note) openNoteInActiveTab(note)
+  }
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -425,35 +433,69 @@ export default function NotesPage() {
                 placeholder="Untitled"
               />
 
-              {/* Suggest Links panel */}
-              {activeTab.suggestions && activeTab.suggestions.length > 0 && (
-                <div className="mb-6 p-4 border border-blue-100 rounded-lg bg-blue-50/50">
-                  <p className="text-xs font-medium text-blue-600 mb-3 flex items-center gap-1.5">
-                    <Link2 size={12} />
-                    Suggested Links
-                  </p>
-                  <div className="flex gap-1.5 flex-wrap mb-4">
-                    {activeTab.suggestions.map(title => (
-                      <span key={title} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-mono">
+              {/* Active wikilinks */}
+              {activeWikilinks.length > 0 && (
+                <div className="flex gap-1.5 flex-wrap mb-5">
+                  {activeWikilinks.map(title => {
+                    const resolved = noteTitleSet.has(title)
+                    return resolved ? (
+                      <button
+                        key={title}
+                        onClick={() => openNoteByTitle(title)}
+                        className="text-xs px-2.5 py-1 rounded-full border bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 transition-colors font-mono"
+                      >
+                        [[{title}]]
+                      </button>
+                    ) : (
+                      <span key={title} className="text-xs px-2.5 py-1 rounded-full border bg-gray-50 text-gray-400 border-gray-200 font-mono">
                         [[{title}]]
                       </span>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => insertSuggestedLinks(activeKey)}
-                      className="text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors font-medium"
-                    >
-                      Insert into note
-                    </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Suggest Links panel */}
+              {activeTab.suggestions !== null && (
+                activeTab.suggestions.length === 0 ? (
+                  <div className="mb-4 px-4 py-3 border border-gray-100 rounded-lg bg-gray-50 flex items-center justify-between">
+                    <p className="text-xs text-gray-400">No related notes found to link to.</p>
                     <button
                       onClick={() => setTabs(prev => prev.map(t => t._key === activeKey ? { ...t, suggestions: null } : t))}
-                      className="text-xs px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-500 border border-gray-200 rounded-md transition-colors"
+                      className="text-gray-300 hover:text-gray-500 transition-colors"
                     >
-                      Dismiss
+                      <X size={12} />
                     </button>
                   </div>
-                </div>
+                ) : (
+                  <div className="mb-6 p-4 border border-blue-100 rounded-lg bg-blue-50/50">
+                    <p className="text-xs font-medium text-blue-600 mb-3 flex items-center gap-1.5">
+                      <Link2 size={12} />
+                      Suggested Links
+                    </p>
+                    <div className="flex gap-1.5 flex-wrap mb-4">
+                      {activeTab.suggestions.map(title => (
+                        <span key={title} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-mono">
+                          [[{title}]]
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => insertSuggestedLinks(activeKey)}
+                        className="text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors font-medium"
+                      >
+                        Insert into note
+                      </button>
+                      <button
+                        onClick={() => setTabs(prev => prev.map(t => t._key === activeKey ? { ...t, suggestions: null } : t))}
+                        className="text-xs px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-500 border border-gray-200 rounded-md transition-colors"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                )
               )}
 
               {activeTab.id && (
