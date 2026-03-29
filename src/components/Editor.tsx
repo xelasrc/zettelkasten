@@ -46,18 +46,23 @@ const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     <BlockNoteView editor={editor} theme="light">
       <SuggestionMenuController
         triggerCharacter="["
-        minQueryLength={1}
+        minQueryLength={0}
+        shouldOpen={(tr) => {
+          const { from } = tr.selection
+          const charBeforeTrigger = tr.doc.textBetween(Math.max(0, from - 2), Math.max(0, from - 1), '')
+          return charBeforeTrigger === '['
+        }}
         getItems={async (query) => {
-          if (!query.startsWith('[')) return []
-          const search = query.slice(1)
           return noteTitles
-            .filter(t => t.toLowerCase().includes(search.toLowerCase()))
+            .filter(t => t.toLowerCase().includes(query.toLowerCase()))
             .slice(0, 10)
             .map(title => ({
               title,
               onItemClick: () => {
+                // First [ is already in the document; BlockNote removes the trigger [
+                // and query on selection, so we only need to insert [title]]
                 editor.insertInlineContent([
-                  { type: 'text', text: `[[${title}]]`, styles: {} }
+                  { type: 'text', text: `[${title}]]`, styles: {} }
                 ])
               }
             }))
