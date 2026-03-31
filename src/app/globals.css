@@ -3,8 +3,19 @@
 
 * { box-sizing: border-box; }
 
+.app-container {
+  box-shadow: 0 0 0 1px #f4c6a5, 4px 0 24px rgba(0,0,0,0.08), -4px 0 24px rgba(0,0,0,0.08);
+}
+
 body {
-  background: #f5f5f5;
-  color: #1a1a1a;
+  background-color: #fae8d4;
+  background-image: repeating-linear-gradient(
+    45deg,
+    #f4c6a5 0px,
+    #f4c6a5 1px,
+    transparent 1px,
+    transparent 12px
+  );
+  color: #1c1917;
   font-family: 'Inter', system-ui, sans-serif;
 }

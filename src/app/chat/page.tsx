@@ -153,21 +153,21 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-[100dvh] pb-16 md:pb-0 bg-gray-50 overflow-hidden">
+    <div className="app-container flex flex-col h-[100dvh] pb-16 md:pb-0 bg-stone-50 overflow-hidden max-w-6xl mx-auto w-full">
       <Sidebar />
 
       <div className="flex-1 flex flex-col overflow-hidden bg-white">
         {/* Header */}
-        <div className="h-14 flex items-center justify-between px-4 sm:px-6 border-b border-gray-200 shrink-0">
+        <div className="h-14 flex items-center justify-between px-4 sm:px-6 border-b border-stone-200 shrink-0">
           <div>
-            <h1 className="text-sm font-semibold text-gray-900">Chat</h1>
-            <p className="text-xs text-gray-400 hidden sm:block">Ask questions about your notes</p>
-            <p className="text-xs text-gray-400 sm:hidden">Ask your notes anything</p>
+            <h1 className="text-sm font-semibold text-stone-900">Chat</h1>
+            <p className="text-xs text-stone-400 hidden sm:block">Ask questions about your notes</p>
+            <p className="text-xs text-stone-400 sm:hidden">Ask your notes anything</p>
           </div>
           {messages.length > 0 && (
             <button
               onClick={clearChat}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 text-stone-400 hover:text-gray-600 hover:bg-stone-100 rounded-lg transition-colors"
               title="Clear chat"
             >
               <Eraser size={15} />
@@ -180,11 +180,11 @@ export default function ChatPage() {
           <div className="max-w-2xl mx-auto">
             {messages.length === 0 && (
               <div className="text-center mt-16">
-                <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                  <Bot size={20} className="text-gray-400" />
+                <div className="w-12 h-12 rounded-xl bg-stone-100 flex items-center justify-center mx-auto mb-4">
+                  <Bot size={20} className="text-stone-400" />
                 </div>
-                <h2 className="text-sm font-semibold text-gray-700 mb-1">Ask your knowledge base</h2>
-                <p className="text-xs text-gray-400">Rhizome searches your notes and answers using what you've written</p>
+                <h2 className="text-sm font-semibold text-stone-700 mb-1">Ask your knowledge base</h2>
+                <p className="text-xs text-stone-400">Rhizome searches your notes and answers using what you've written</p>
               </div>
             )}
 
@@ -193,8 +193,8 @@ export default function ChatPage() {
                 <div className="flex gap-3 items-start">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
                     msg.role === 'user'
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-blue-50 text-blue-500 border border-blue-100'
+                      ? 'bg-stone-900 text-white'
+                      : 'bg-orange-50 text-orange-500 border border-orange-100'
                   }`}>
                     {msg.role === 'user'
                       ? <User size={13} />
@@ -202,30 +202,30 @@ export default function ChatPage() {
                     }
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-400 mb-1">
+                    <p className="text-xs font-medium text-stone-400 mb-1">
                       {msg.role === 'user' ? 'You' : 'Rhizome'}
                     </p>
                     {msg.role === 'assistant' ? (
                       <div className="prose prose-sm prose-gray max-w-none
                         prose-p:my-1 prose-p:leading-relaxed
-                        prose-headings:font-semibold prose-headings:text-gray-900
-                        prose-code:text-xs prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:before:content-none prose-code:after:content-none
-                        prose-pre:bg-gray-100 prose-pre:text-xs
+                        prose-headings:font-semibold prose-headings:text-stone-900
+                        prose-code:text-xs prose-code:bg-stone-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:before:content-none prose-code:after:content-none
+                        prose-pre:bg-stone-100 prose-pre:text-xs
                         prose-ul:my-1 prose-ol:my-1 prose-li:my-0
-                        prose-strong:text-gray-900">
+                        prose-strong:text-stone-900">
                         <ReactMarkdown>{msg.content}</ReactMarkdown>
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
+                      <p className="text-sm text-stone-800 leading-relaxed">{msg.content}</p>
                     )}
                     {msg.sources && msg.sources.length > 0 && (
                       <div className="mt-3 flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-gray-400">Sources:</span>
+                        <span className="text-xs text-stone-400">Sources:</span>
                         {msg.sources.map(source => (
                           <Link
                             key={source.id}
                             href={`/notes?open=${source.id}`}
-                            className="text-xs bg-green-50 text-green-700 border border-green-100 px-2.5 py-1 rounded-full hover:bg-green-100 transition-colors"
+                            className="text-xs bg-orange-50 text-orange-700 border border-orange-100 px-2.5 py-1 rounded-full hover:bg-orange-100 transition-colors"
                           >
                             {source.title}
                           </Link>
@@ -240,11 +240,11 @@ export default function ChatPage() {
             {loading && (
               <div className="mb-6">
                 <div className="flex gap-3 items-start">
-                  <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-500 border border-blue-100 flex items-center justify-center shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-orange-50 text-orange-500 border border-orange-100 flex items-center justify-center shrink-0">
                     <Bot size={13} />
                   </div>
                   <div className="flex-1">
-                    <p className="text-xs font-medium text-gray-400 mb-2">Rhizome</p>
+                    <p className="text-xs font-medium text-stone-400 mb-2">Rhizome</p>
                     <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: '0ms' }} />
                       <div className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -260,22 +260,22 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
-        <div className="border-t border-gray-200 px-4 sm:px-6 py-4 bg-white shrink-0">
+        <div className="border-t border-stone-200 px-4 sm:px-6 py-4 bg-white shrink-0">
           <div className="max-w-2xl mx-auto flex gap-3">
             <input
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
               placeholder="Ask your knowledge base..."
-              className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-base md:text-sm outline-none text-gray-900 placeholder-gray-400 focus:border-blue-300 focus:bg-white transition-colors"
+              className="flex-1 bg-stone-50 border border-stone-200 rounded-lg px-4 py-2.5 text-base md:text-sm outline-none text-stone-900 placeholder-stone-400 focus:border-orange-300 focus:bg-white transition-colors"
             />
             <button
               onClick={sendMessage}
               disabled={loading || !input.trim()}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 loading || !input.trim()
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-gray-900 text-white hover:bg-gray-700'
+                  ? 'bg-stone-100 text-stone-400 cursor-not-allowed'
+                  : 'bg-stone-900 text-white hover:bg-stone-700'
               }`}
             >
               <Send size={14} />

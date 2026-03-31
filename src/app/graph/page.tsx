@@ -113,7 +113,7 @@ export default function GraphPage() {
       .selectAll('line')
       .data(links)
       .join('line')
-      .attr('stroke', '#cbd5e1')
+      .attr('stroke', '#d6d3d1')
       .attr('stroke-width', 1.5)
       .attr('stroke-opacity', 0.7)
 
@@ -143,7 +143,7 @@ export default function GraphPage() {
           .attr('stroke', (l: any) => {
             const s = (l.source as GraphNode).id
             const t = (l.target as GraphNode).id
-            return s === d.id || t === d.id ? '#3b82f6' : '#cbd5e1'
+            return s === d.id || t === d.id ? '#f97316' : '#d6d3d1'
           })
         label.attr('opacity', (n: any) => {
           if (currentZoomK < 0.6) return 0
@@ -152,14 +152,14 @@ export default function GraphPage() {
 
         d3.select(event.currentTarget).select('circle')
           .attr('filter', 'url(#glow)')
-          .attr('stroke', '#93c5fd')
+          .attr('stroke', '#fdba74')
           .attr('stroke-width', 3)
           .attr('opacity', 1)
       })
       .on('mouseleave', (event, d) => {
         setHoveredNote(null)
         node.select('circle').attr('opacity', 1)
-        link.attr('stroke-opacity', 0.7).attr('stroke', '#cbd5e1')
+        link.attr('stroke-opacity', 0.7).attr('stroke', '#d6d3d1')
         label.attr('opacity', currentZoomK >= 0.6 ? 1 : 0)
         // use d directly from event args — avoids datum lookup on child element
         d3.select(event.currentTarget).select('circle')
@@ -196,7 +196,7 @@ export default function GraphPage() {
 
     node.append('circle')
       .attr('r', nodeRadius)
-      .attr('fill', '#1d4ed8')
+      .attr('fill', '#f97316')
       .attr('stroke', '#fff')
       .attr('stroke-width', 1.5)
 
@@ -207,7 +207,7 @@ export default function GraphPage() {
       .attr('text-anchor', 'middle')
       .attr('font-size', '10px')
       .attr('font-family', 'Inter, system-ui, sans-serif')
-      .attr('fill', '#475569')
+      .attr('fill', '#78716c')
       .attr('font-weight', '500')
       .attr('pointer-events', 'none')
       .attr('opacity', 1)
@@ -253,48 +253,48 @@ export default function GraphPage() {
   }, [])
 
   return (
-    <div className="flex h-[100dvh] pb-16 md:pb-0 bg-gray-50 overflow-hidden">
+    <div className="app-container flex flex-col h-[100dvh] pb-16 md:pb-0 bg-stone-50 overflow-hidden max-w-6xl mx-auto w-full">
       <Sidebar />
 
       <div className="flex-1 flex flex-col overflow-hidden bg-white">
-        <div className="h-14 flex items-center justify-between px-4 sm:px-6 border-b border-gray-200 shrink-0">
+        <div className="h-14 flex items-center justify-between px-4 sm:px-6 border-b border-stone-200 shrink-0">
           <div>
-            <h1 className="text-sm font-semibold text-gray-900">Knowledge Graph</h1>
-            <p className="text-xs text-gray-400">{notes.length} notes · connected by [[wikilinks]]</p>
+            <h1 className="text-sm font-semibold text-stone-900">Knowledge Graph</h1>
+            <p className="text-xs text-stone-400">{notes.length} notes · connected by [[wikilinks]]</p>
           </div>
-          <p className="text-xs text-gray-400 hidden sm:block">Scroll to zoom · drag to pin · drag again to unpin</p>
-          <p className="text-xs text-gray-400 sm:hidden">Pinch to zoom · drag to pin · drag again to unpin</p>
+          <p className="text-xs text-stone-400 hidden sm:block">Scroll to zoom · drag to pin · drag again to unpin</p>
+          <p className="text-xs text-stone-400 sm:hidden">Pinch to zoom · drag to pin · drag again to unpin</p>
         </div>
 
         <div className="flex-1 relative">
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-6 h-6 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin" />
+              <div className="w-6 h-6 rounded-full border-2 border-orange-200 border-t-orange-500 animate-spin" />
             </div>
           )}
 
           <svg ref={svgRef} className="w-full h-full block" />
 
           {hoveredNote && (
-            <div className="absolute bottom-20 md:bottom-6 left-4 md:left-6 bg-white border border-gray-200 rounded-lg p-3 md:p-4 max-w-xs shadow-sm pointer-events-none">
-              <p className="font-semibold text-sm text-gray-900 mb-2">{hoveredNote.title}</p>
+            <div className="absolute bottom-20 md:bottom-6 left-4 md:left-6 bg-white border border-stone-200 rounded-lg p-3 md:p-4 max-w-xs shadow-sm pointer-events-none">
+              <p className="font-semibold text-sm text-stone-900 mb-2">{hoveredNote.title}</p>
               {hoveredNote.links.length > 0 && (
                 <div className="flex gap-1.5 flex-wrap">
                   {hoveredNote.links.map(link => (
-                    <span key={link} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100">
+                    <span key={link} className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full border border-orange-100">
                       [[{link}]]
                     </span>
                   ))}
                 </div>
               )}
-              <p className="text-xs text-gray-400 mt-2">Click to open note</p>
+              <p className="text-xs text-stone-400 mt-2">Click to open note</p>
             </div>
           )}
 
           {!loading && notes.length > 0 && notes.every(n => n.links.length === 0) && (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-              <p className="text-sm font-medium text-gray-400 mb-1">No connections yet</p>
-              <p className="text-xs text-gray-300">Type [[Note Title]] in your notes to connect them</p>
+              <p className="text-sm font-medium text-stone-400 mb-1">No connections yet</p>
+              <p className="text-xs text-stone-300">Type [[Note Title]] in your notes to connect them</p>
             </div>
           )}
         </div>
