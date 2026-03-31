@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     if (!allTitles?.length) return NextResponse.json({ links: [] })
 
     const message = await client.messages.create({
-      model: 'claude-opus-4-6',
+      model: 'claude-haiku-4-5',
       max_tokens: 256,
       messages: [{
         role: 'user',

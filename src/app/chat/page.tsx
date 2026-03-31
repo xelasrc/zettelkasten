@@ -4,8 +4,9 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import ReactMarkdown from 'react-markdown'
 import Sidebar from '@/components/Nav'
-import { Send, Bot, User } from 'lucide-react'
+import { Send, Bot, User, Eraser } from 'lucide-react'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -13,49 +14,141 @@ interface Message {
   sources?: { id: number; title: string; similarity: number }[]
 }
 
-const suggestions = [
-  'What do I know about machine learning?',
-  'Summarise my notes on neural networks',
-  'How does backpropagation relate to gradient descent?',
-  'What concepts should I explore next?'
-]
+const MARKER = 'RHIZOME_USED: '
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<Message[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const saved = localStorage.getItem('chat-messages')
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    localStorage.setItem('chat-messages', JSON.stringify(messages))
+  }, [messages])
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  function clearChat() {
+    setMessages([])
+    localStorage.removeItem('chat-messages')
+  }
 
   async function sendMessage() {
     if (!input.trim() || loading) return
 
     const userMessage = input.trim()
     setInput('')
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }])
+
+    const newMessages: Message[] = [...messages, { role: 'user', content: userMessage }]
+    setMessages(newMessages)
     setLoading(true)
+
+    let assistantContent = ''
+    let assistantSources: Message['sources'] = []
+    let assistantAdded = false
 
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessage })
+        body: JSON.stringify({
+          messages: newMessages.slice(-10).map(m => ({ role: m.role, content: m.content }))
+        })
       })
-      const data = await res.json()
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: data.answer,
-        sources: data.sources
-      }])
+
+      if (!res.ok || !res.body) throw new Error('Request failed')
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const data = line.slice(6)
+          if (data === '[DONE]') continue
+
+          try {
+            const parsed = JSON.parse(data)
+            if (parsed.sources !== undefined) {
+              assistantSources = parsed.sources
+            }
+            if (parsed.text) {
+              assistantContent += parsed.text
+              if (!assistantAdded) {
+                assistantAdded = true
+                setLoading(false)
+                setMessages(prev => [...prev, {
+                  role: 'assistant',
+                  content: assistantContent,
+                  sources: assistantSources
+                }])
+              } else {
+                setMessages(prev => {
+                  const next = [...prev]
+                  next[next.length - 1] = {
+                    ...next[next.length - 1],
+                    content: assistantContent,
+                    sources: assistantSources
+                  }
+                  return next
+                })
+              }
+            }
+            if (parsed.error) throw new Error(parsed.error)
+          } catch {
+            // ignore individual parse errors
+          }
+        }
+      }
+
+      // Parse RHIZOME_USED marker and clean up the displayed text
+      const markerIdx = assistantContent.indexOf('\n' + MARKER)
+      if (markerIdx !== -1) {
+        const cleanText = assistantContent.slice(0, markerIdx)
+        const usedLine = assistantContent.slice(markerIdx + 1 + MARKER.length)
+        const usedTitles = usedLine.split('|').map(t => t.trim()).filter(Boolean)
+        const filteredSources = (assistantSources ?? []).filter(s =>
+          usedTitles.some(t => t.toLowerCase() === s.title.toLowerCase())
+        )
+        setMessages(prev => {
+          const next = [...prev]
+          next[next.length - 1] = {
+            ...next[next.length - 1],
+            content: cleanText,
+            sources: filteredSources.length > 0 ? filteredSources : assistantSources
+          }
+          return next
+        })
+      }
+
+      if (!assistantAdded) {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'No response generated.' }])
+      }
     } catch {
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: 'Something went wrong. Please try again.'
       }])
     }
+
     setLoading(false)
   }
 
@@ -68,9 +161,18 @@ export default function ChatPage() {
         <div className="h-14 flex items-center justify-between px-4 sm:px-6 border-b border-gray-200 shrink-0">
           <div>
             <h1 className="text-sm font-semibold text-gray-900">Chat</h1>
-            <p className="text-xs text-gray-400 hidden sm:block">Ask questions about your notes · powered by Llama 3.2 locally</p>
+            <p className="text-xs text-gray-400 hidden sm:block">Ask questions about your notes</p>
             <p className="text-xs text-gray-400 sm:hidden">Ask your notes anything</p>
           </div>
+          {messages.length > 0 && (
+            <button
+              onClick={clearChat}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Clear chat"
+            >
+              <Eraser size={15} />
+            </button>
+          )}
         </div>
 
         {/* Messages */}
@@ -82,18 +184,7 @@ export default function ChatPage() {
                   <Bot size={20} className="text-gray-400" />
                 </div>
                 <h2 className="text-sm font-semibold text-gray-700 mb-1">Ask your knowledge base</h2>
-                <p className="text-xs text-gray-400 mb-8">Rhizome searches your notes and answers using what you've written</p>
-                <div className="flex flex-col gap-2 w-full">
-                  {suggestions.map(s => (
-                    <button
-                      key={s}
-                      onClick={() => setInput(s)}
-                      className="w-full text-sm text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-4 py-3 transition-colors text-left"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
+                <p className="text-xs text-gray-400">Rhizome searches your notes and answers using what you've written</p>
               </div>
             )}
 
@@ -114,16 +205,26 @@ export default function ChatPage() {
                     <p className="text-xs font-medium text-gray-400 mb-1">
                       {msg.role === 'user' ? 'You' : 'Rhizome'}
                     </p>
-                    <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-                      {msg.content}
-                    </p>
+                    {msg.role === 'assistant' ? (
+                      <div className="prose prose-sm prose-gray max-w-none
+                        prose-p:my-1 prose-p:leading-relaxed
+                        prose-headings:font-semibold prose-headings:text-gray-900
+                        prose-code:text-xs prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:before:content-none prose-code:after:content-none
+                        prose-pre:bg-gray-100 prose-pre:text-xs
+                        prose-ul:my-1 prose-ol:my-1 prose-li:my-0
+                        prose-strong:text-gray-900">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
+                    )}
                     {msg.sources && msg.sources.length > 0 && (
                       <div className="mt-3 flex items-center gap-2 flex-wrap">
                         <span className="text-xs text-gray-400">Sources:</span>
                         {msg.sources.map(source => (
                           <Link
                             key={source.id}
-                            href={`/notes`}
+                            href={`/notes?open=${source.id}`}
                             className="text-xs bg-green-50 text-green-700 border border-green-100 px-2.5 py-1 rounded-full hover:bg-green-100 transition-colors"
                           >
                             {source.title}
