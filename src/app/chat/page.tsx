@@ -60,15 +60,16 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-[100dvh] pb-16 md:pb-0 bg-gray-50 overflow-hidden">
       <Sidebar />
 
       <div className="flex-1 flex flex-col overflow-hidden bg-white">
         {/* Header */}
-        <div className="h-14 flex items-center justify-between px-6 border-b border-gray-200 shrink-0">
+        <div className="h-14 flex items-center justify-between px-4 sm:px-6 border-b border-gray-200 shrink-0">
           <div>
             <h1 className="text-sm font-semibold text-gray-900">Chat</h1>
-            <p className="text-xs text-gray-400">Ask questions about your notes · powered by Llama 3.2 locally</p>
+            <p className="text-xs text-gray-400 hidden sm:block">Ask questions about your notes · powered by Llama 3.2 locally</p>
+            <p className="text-xs text-gray-400 sm:hidden">Ask your notes anything</p>
           </div>
         </div>
 
@@ -82,12 +83,12 @@ export default function ChatPage() {
                 </div>
                 <h2 className="text-sm font-semibold text-gray-700 mb-1">Ask your knowledge base</h2>
                 <p className="text-xs text-gray-400 mb-8">Rhizome searches your notes and answers using what you've written</p>
-                <div className="flex flex-col gap-2 items-center">
+                <div className="flex flex-col gap-2 w-full">
                   {suggestions.map(s => (
                     <button
                       key={s}
                       onClick={() => setInput(s)}
-                      className="text-sm text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-4 py-2 transition-colors"
+                      className="w-full text-sm text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-4 py-3 transition-colors text-left"
                     >
                       {s}
                     </button>
@@ -158,14 +159,14 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
-        <div className="border-t border-gray-200 px-6 py-4 bg-white shrink-0">
+        <div className="border-t border-gray-200 px-4 sm:px-6 py-4 bg-white shrink-0">
           <div className="max-w-2xl mx-auto flex gap-3">
             <input
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
               placeholder="Ask your knowledge base..."
-              className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none text-gray-900 placeholder-gray-400 focus:border-blue-300 focus:bg-white transition-colors"
+              className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-base md:text-sm outline-none text-gray-900 placeholder-gray-400 focus:border-blue-300 focus:bg-white transition-colors"
             />
             <button
               onClick={sendMessage}

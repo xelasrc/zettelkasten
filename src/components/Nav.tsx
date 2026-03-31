@@ -47,7 +47,10 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 flex">
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 flex"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
         {navItems.map(({ label, href, icon: Icon }) => {
           const active = pathname.startsWith(href)
           return (
@@ -63,6 +66,9 @@ export default function Sidebar() {
             </Link>
           )
         })}
+        <div className="flex-1 flex flex-col items-center gap-1 py-3">
+          <UserButton />
+        </div>
       </nav>
     </>
   )

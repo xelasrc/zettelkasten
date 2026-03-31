@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import nextDynamic from 'next/dynamic'
 import Sidebar from '@/components/Nav'
 import type { EditorHandle } from '@/components/Editor'
-import { Search, X, FileText, Trash2, Plus, FilePlus, ArrowUpDown, Link2 } from 'lucide-react'
+import { Search, X, FileText, Trash2, Plus, FilePlus, ArrowUpDown, Link2, List } from 'lucide-react'
 import { extractWikilinks } from '@/lib/embeddings'
 
 const Editor = nextDynamic(() => import('@/components/Editor'), { ssr: false })
@@ -58,6 +58,7 @@ export default function NotesPage() {
   const [search, setSearch] = useState('')
   const [sortMode, setSortMode] = useState<SortMode>('updated')
   const [showSortMenu, setShowSortMenu] = useState(false)
+  const [showNotesList, setShowNotesList] = useState(false)
   const [tabs, setTabs] = useState<OpenTab[]>(() => [makeEmptyTab()])
   const [activeKey, setActiveKey] = useState<number>(1)
   const editorRef = useRef<EditorHandle>(null)
@@ -132,6 +133,7 @@ export default function NotesPage() {
   }
 
   async function openNoteInActiveTab(note: Note) {
+    setShowNotesList(false)
     const [noteRes, backlinksRes] = await Promise.all([
       fetch(`/api/notes/${note.id}`),
       fetch(`/api/notes/${note.id}/backlinks`)
@@ -275,11 +277,26 @@ export default function NotesPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-[100dvh] pb-16 md:pb-0 bg-gray-50 overflow-hidden">
       <Sidebar />
 
-      {/* Notes list column */}
-      <div className="flex flex-col w-60 border-r border-gray-200 shrink-0 overflow-hidden bg-white">
+      {/* Mobile backdrop for notes list drawer */}
+      {showNotesList && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/20 z-20"
+          onClick={() => setShowNotesList(false)}
+        />
+      )}
+
+      {/* Notes list column — fixed drawer on mobile, static column on desktop */}
+      <div className={`
+        flex flex-col border-r border-gray-200 shrink-0 overflow-hidden bg-white
+        fixed md:relative inset-y-0 left-0 z-30 md:z-auto
+        w-72 md:w-60
+        shadow-xl md:shadow-none
+        transition-transform duration-200 ease-in-out
+        ${showNotesList ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
 
         {/* Toolbar */}
         <div className="h-11 flex items-center justify-around px-2 border-b border-gray-100 bg-gray-50/80 shrink-0">
@@ -388,13 +405,21 @@ export default function NotesPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Tab bar */}
-        <div className="flex items-center border-b border-gray-200 bg-white shrink-0 h-10">
+        <div className="flex items-center border-b border-gray-200 bg-white shrink-0 h-11">
+          {/* Mobile: toggle notes list */}
+          <button
+            onClick={() => setShowNotesList(p => !p)}
+            className="md:hidden flex items-center justify-center w-11 h-11 shrink-0 border-r border-gray-200 text-gray-400 hover:text-gray-700 transition-colors"
+            title="Toggle notes list"
+          >
+            <List size={16} />
+          </button>
           <div className="flex items-center overflow-x-auto flex-1">
             {tabs.map(tab => (
               <button
                 key={tab._key}
                 onClick={() => setActiveKey(tab._key)}
-                className={`relative flex items-center gap-2 px-4 h-10 border-r border-gray-200 text-xs shrink-0 transition-colors group ${
+                className={`relative flex items-center gap-2 px-3 h-11 border-r border-gray-200 text-xs shrink-0 transition-colors group ${
                   activeKey === tab._key
                     ? 'bg-gray-50 text-gray-900 font-medium'
                     : 'text-gray-400 hover:text-gray-700 hover:bg-gray-50'
@@ -407,7 +432,7 @@ export default function NotesPage() {
                 {tab.isDirty && <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />}
                 <span
                   onClick={(e) => closeTab(tab._key, e)}
-                  className="opacity-0 group-hover:opacity-100 hover:bg-gray-200 rounded p-0.5 transition-all cursor-pointer ml-0.5"
+                  className="md:opacity-0 md:group-hover:opacity-100 hover:bg-gray-200 rounded p-0.5 transition-all cursor-pointer ml-0.5"
                 >
                   <X size={10} />
                 </span>
@@ -436,7 +461,7 @@ export default function NotesPage() {
                 }`}
               >
                 <Link2 size={13} />
-                {activeTab.linking ? 'Thinking...' : 'Suggest Links'}
+                <span className="hidden sm:inline">{activeTab.linking ? 'Thinking...' : 'Suggest Links'}</span>
               </button>
             )}
             {activeTab && (
@@ -463,11 +488,11 @@ export default function NotesPage() {
         {/* Note content */}
         <div className="flex-1 overflow-y-auto bg-white">
           {activeTab ? (
-            <div className="px-10 py-8 max-w-4xl">
+            <div className="px-4 sm:px-8 md:px-10 py-5 md:py-8 max-w-4xl pb-24 md:pb-10">
               <input
                 value={activeTab.title}
                 onChange={e => handleTitleChange(e.target.value)}
-                className="w-full text-3xl font-bold text-gray-900 outline-none mb-3 bg-transparent placeholder-gray-300"
+                className="w-full text-2xl md:text-3xl font-bold text-gray-900 outline-none mb-3 bg-transparent placeholder-gray-300"
                 placeholder="Untitled"
               />
 

@@ -134,23 +134,24 @@ export default function GraphPage() {
   }, [notes, router])
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-[100dvh] pb-16 md:pb-0 bg-gray-50 overflow-hidden">
       <Sidebar />
 
       <div className="flex-1 flex flex-col overflow-hidden bg-white">
-        <div className="h-14 flex items-center justify-between px-6 border-b border-gray-200 shrink-0">
+        <div className="h-14 flex items-center justify-between px-4 sm:px-6 border-b border-gray-200 shrink-0">
           <div>
             <h1 className="text-sm font-semibold text-gray-900">Knowledge Graph</h1>
             <p className="text-xs text-gray-400">{notes.length} notes · connected by [[wikilinks]]</p>
           </div>
-          <p className="text-xs text-gray-400">Scroll to zoom · drag to pan</p>
+          <p className="text-xs text-gray-400 hidden sm:block">Scroll to zoom · drag to pan</p>
+          <p className="text-xs text-gray-400 sm:hidden">Pinch to zoom · drag to pan</p>
         </div>
 
         <div className="flex-1 relative">
           <svg ref={svgRef} className="w-full h-full block" />
 
           {hoveredNote && (
-            <div className="absolute bottom-6 left-6 bg-white border border-gray-200 rounded-lg p-4 max-w-xs shadow-sm pointer-events-none">
+            <div className="absolute bottom-20 md:bottom-6 left-4 md:left-6 bg-white border border-gray-200 rounded-lg p-3 md:p-4 max-w-xs shadow-sm pointer-events-none">
               <p className="font-semibold text-sm text-gray-900 mb-2">{hoveredNote.title}</p>
               {hoveredNote.links.length > 0 && (
                 <div className="flex gap-1.5 flex-wrap">
