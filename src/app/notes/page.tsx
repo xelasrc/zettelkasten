@@ -62,6 +62,7 @@ export default function NotesPage() {
   const [activeKey, setActiveKey] = useState<number>(1)
   const editorRef = useRef<EditorHandle>(null)
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const openHandledRef = useRef(false)
 
   useEffect(() => {
     fetch('/api/notes').then(res => {
@@ -75,6 +76,18 @@ export default function NotesPage() {
       setActiveKey(tabs[tabs.length - 1]._key)
     }
   }, [tabs, activeKey])
+
+  useEffect(() => {
+    if (openHandledRef.current || !notes.length) return
+    const openId = new URLSearchParams(window.location.search).get('open')
+    if (!openId) return
+    openHandledRef.current = true
+    window.history.replaceState(null, '', '/notes')
+    const note = notes.find(n => n.id === Number(openId))
+    if (note) openNoteInActiveTab(note)
+  // openNoteInActiveTab uses activeKey from closure — intentionally omitted to only run on notes load
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes])
 
   function createTab() {
     const tab = makeEmptyTab()
@@ -106,9 +119,15 @@ export default function NotesPage() {
         ))
       }
     } else {
-      setTabs(prev => prev.map(t =>
-        t._key === activeKey ? { ...t, title, isDirty: true } : t
-      ))
+      setNotes(prev => prev.map(n => n.id === tab.id ? { ...n, title } : n))
+      setTabs(prev => {
+        const updated = prev.map(t =>
+          t._key === activeKey ? { ...t, title, isDirty: true } : t
+        )
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+        saveTimerRef.current = setTimeout(() => saveTab(activeKey, updated), 1500)
+        return updated
+      })
     }
   }
 
@@ -285,7 +304,8 @@ export default function NotesPage() {
             {showSortMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowSortMenu(false)} />
-                <div className="absolute top-full left-0 mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-xl w-40 py-1">
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-white border border-gray-200 rounded-xl shadow-lg w-44 overflow-hidden">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 pt-3 pb-1.5">Sort by</p>
                   {([
                     { value: 'updated', label: 'Last modified' },
                     { value: 'created', label: 'Date created' },
@@ -294,15 +314,19 @@ export default function NotesPage() {
                     <button
                       key={option.value}
                       onClick={() => { setSortMode(option.value); setShowSortMenu(false) }}
-                      className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
                         sortMode === option.value
                           ? 'text-blue-600 bg-blue-50 font-medium'
                           : 'text-gray-600 hover:bg-gray-50'
                       }`}
                     >
                       {option.label}
+                      {sortMode === option.value && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                      )}
                     </button>
                   ))}
+                  <div className="pb-1.5" />
                 </div>
               </>
             )}
