@@ -8,7 +8,7 @@ export async function GET() {
 
   try {
     const result = await pool.query(
-      'SELECT id, title, links, created_at, updated_at FROM notes WHERE user_id = $1 ORDER BY updated_at DESC',
+      'SELECT id, title, links, folder_id, created_at, updated_at FROM notes WHERE user_id = $1 ORDER BY updated_at DESC',
       [userId]
     )
     return NextResponse.json(result.rows)

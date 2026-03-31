@@ -63,6 +63,23 @@ export async function PUT(
   }
 }
 
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { id } = await params
+  const { folder_id } = await request.json()
+  const result = await pool.query(
+    'UPDATE notes SET folder_id = $1 WHERE id = $2 AND user_id = $3 RETURNING id, folder_id',
+    [folder_id ?? null, id, userId]
+  )
+  if (result.rows.length === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  return NextResponse.json(result.rows[0])
+}
+
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

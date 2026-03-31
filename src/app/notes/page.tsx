@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import nextDynamic from 'next/dynamic'
 import Sidebar from '@/components/Nav'
 import type { EditorHandle } from '@/components/Editor'
-import { Search, X, FileText, Trash2, Plus, FilePlus, ArrowUpDown, Link2, List } from 'lucide-react'
+import { Search, X, FileText, Trash2, Plus, FilePlus, ArrowUpDown, Link2, List, FolderPlus, Folder, FolderOpen, ChevronRight, MoreHorizontal } from 'lucide-react'
 import { extractWikilinks } from '@/lib/embeddings'
 
 const Editor = nextDynamic(() => import('@/components/Editor'), { ssr: false })
@@ -16,8 +16,14 @@ interface Note {
   id: number
   title: string
   links: string[]
+  folder_id: number | null
   created_at: string
   updated_at: string
+}
+
+interface FolderItem {
+  id: number
+  name: string
 }
 
 interface OpenTab {
@@ -55,10 +61,17 @@ function makeEmptyTab(): OpenTab {
 export default function NotesPage() {
   const router = useRouter()
   const [notes, setNotes] = useState<Note[]>([])
+  const [folders, setFolders] = useState<FolderItem[]>([])
   const [search, setSearch] = useState('')
   const [sortMode, setSortMode] = useState<SortMode>('updated')
   const [showSortMenu, setShowSortMenu] = useState(false)
   const [showNotesList, setShowNotesList] = useState(false)
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<number>>(new Set())
+  const [newFolderName, setNewFolderName] = useState('')
+  const [showNewFolder, setShowNewFolder] = useState(false)
+  const [renamingFolder, setRenamingFolder] = useState<number | null>(null)
+  const [renameFolderName, setRenameFolderName] = useState('')
+  const [moveMenuNoteId, setMoveMenuNoteId] = useState<number | null>(null)
   const [tabs, setTabs] = useState<OpenTab[]>(() => [makeEmptyTab()])
   const [activeKey, setActiveKey] = useState<number>(1)
   const editorRef = useRef<EditorHandle>(null)
@@ -70,6 +83,7 @@ export default function NotesPage() {
       if (res.status === 401) { router.push('/sign-in'); return }
       res.json().then(setNotes)
     })
+    fetch('/api/folders').then(res => res.json()).then(setFolders)
   }, [router])
 
   useEffect(() => {
@@ -86,7 +100,6 @@ export default function NotesPage() {
     window.history.replaceState(null, '', '/notes')
     const note = notes.find(n => n.id === Number(openId))
     if (note) openNoteInActiveTab(note)
-  // openNoteInActiveTab uses activeKey from closure — intentionally omitted to only run on notes load
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notes])
 
@@ -242,6 +255,56 @@ export default function NotesPage() {
     setTabs(prev => prev.map(t => t._key === key ? { ...t, suggestions: null } : t))
   }, [tabs])
 
+  async function createFolder() {
+    if (!newFolderName.trim()) return
+    const res = await fetch('/api/folders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newFolderName.trim() })
+    })
+    const folder = await res.json()
+    setFolders(prev => [...prev, folder].sort((a, b) => a.name.localeCompare(b.name)))
+    setNewFolderName('')
+    setShowNewFolder(false)
+  }
+
+  async function renameFolder(id: number) {
+    if (!renameFolderName.trim()) return
+    const res = await fetch(`/api/folders/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: renameFolderName.trim() })
+    })
+    const updated = await res.json()
+    setFolders(prev => prev.map(f => f.id === id ? updated : f).sort((a, b) => a.name.localeCompare(b.name)))
+    setRenamingFolder(null)
+  }
+
+  async function deleteFolder(id: number) {
+    if (!confirm('Delete this folder? Notes inside will become unfoldered.')) return
+    await fetch(`/api/folders/${id}`, { method: 'DELETE' })
+    setFolders(prev => prev.filter(f => f.id !== id))
+    setNotes(prev => prev.map(n => n.folder_id === id ? { ...n, folder_id: null } : n))
+  }
+
+  async function moveNote(noteId: number, folderId: number | null) {
+    await fetch(`/api/notes/${noteId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folder_id: folderId })
+    })
+    setNotes(prev => prev.map(n => n.id === noteId ? { ...n, folder_id: folderId } : n))
+    setMoveMenuNoteId(null)
+  }
+
+  function toggleFolder(id: number) {
+    setCollapsedFolders(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
   const sorted = [...notes].sort((a, b) => {
     if (sortMode === 'alpha') return a.title.localeCompare(b.title)
     if (sortMode === 'created') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -276,6 +339,65 @@ export default function NotesPage() {
     ))
   }
 
+  function renderNote(note: Note) {
+    const isActive = activeTab?.id === note.id
+    return (
+      <div key={note.id} className="relative group/note">
+        <button
+          onClick={() => openNoteInActiveTab(note)}
+          className={`w-full text-left px-3 py-2.5 border-b border-stone-100 hover:bg-stone-50 transition-colors ${
+            isActive ? 'bg-orange-50 border-l-2 border-l-orange-400' : ''
+          }`}
+        >
+          <p className={`text-sm truncate font-medium pr-6 ${isActive ? 'text-orange-700' : 'text-stone-800'}`}>
+            {note.title}
+          </p>
+          <p className="text-xs text-stone-400 mt-0.5">
+            {new Date(note.updated_at).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </p>
+        </button>
+        {/* Move to folder button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setMoveMenuNoteId(moveMenuNoteId === note.id ? null : note.id) }}
+          className="absolute right-2 top-2.5 md:opacity-0 md:group-hover/note:opacity-100 p-1 rounded hover:bg-stone-200 text-stone-400 transition-all"
+        >
+          <MoreHorizontal size={12} />
+        </button>
+        {moveMenuNoteId === note.id && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setMoveMenuNoteId(null)} />
+            <div className="absolute right-1 top-8 z-50 bg-white border border-stone-200 rounded-lg shadow-lg w-44 overflow-hidden">
+              <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider px-3 pt-2.5 pb-1">Move to</p>
+              <button
+                onClick={() => moveNote(note.id, null)}
+                className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 transition-colors ${
+                  note.folder_id === null ? 'text-orange-600 bg-orange-50 font-medium' : 'text-stone-600 hover:bg-stone-50'
+                }`}
+              >
+                <FileText size={11} /> No folder
+              </button>
+              {folders.map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => moveNote(note.id, f.id)}
+                  className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 transition-colors ${
+                    note.folder_id === f.id ? 'text-orange-600 bg-orange-50 font-medium' : 'text-stone-600 hover:bg-stone-50'
+                  }`}
+                >
+                  <Folder size={11} /> {f.name}
+                </button>
+              ))}
+              <div className="pb-1" />
+            </div>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  // Group notes for display
+  const unfoldered = filtered.filter(n => n.folder_id === null)
+
   return (
     <div className="app-container flex flex-col h-[100dvh] pb-16 md:pb-0 bg-stone-50 overflow-hidden max-w-6xl mx-auto w-full">
       <Sidebar />
@@ -290,7 +412,7 @@ export default function NotesPage() {
         />
       )}
 
-      {/* Notes list column — fixed drawer on mobile, static column on desktop */}
+      {/* Notes list column */}
       <div className={`
         flex flex-col border-r border-stone-200 shrink-0 overflow-hidden bg-white
         fixed md:relative top-0 bottom-16 md:inset-y-0 left-0 z-30 md:z-auto
@@ -308,6 +430,14 @@ export default function NotesPage() {
             className="flex items-center justify-center w-8 h-8 rounded-md hover:bg-stone-200 text-stone-400 hover:text-stone-700 transition-colors"
           >
             <FilePlus size={15} />
+          </button>
+
+          <button
+            onClick={() => { setShowNewFolder(true); setShowSortMenu(false) }}
+            title="New folder"
+            className="flex items-center justify-center w-8 h-8 rounded-md hover:bg-stone-200 text-stone-400 hover:text-stone-700 transition-colors"
+          >
+            <FolderPlus size={15} />
           </button>
 
           <div className="relative">
@@ -372,27 +502,105 @@ export default function NotesPage() {
 
         {/* Notes list */}
         <div className="flex-1 overflow-y-auto">
-          <p className="text-xs text-stone-400 uppercase tracking-wider px-3 pt-3 pb-1.5 font-medium">
-            {filtered.length} notes
-          </p>
-          {filtered.map(note => (
-            <button
-              key={note.id}
-              onClick={() => openNoteInActiveTab(note)}
-              className={`w-full text-left px-3 py-2.5 border-b border-stone-100 hover:bg-stone-50 transition-colors ${
-                activeTab?.id === note.id ? 'bg-orange-50 border-l-2 border-l-orange-400' : ''
-              }`}
-            >
-              <p className={`text-sm truncate font-medium ${
-                activeTab?.id === note.id ? 'text-orange-700' : 'text-stone-800'
-              }`}>
-                {note.title}
-              </p>
-              <p className="text-xs text-stone-400 mt-0.5">
-                {new Date(note.updated_at).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </p>
-            </button>
-          ))}
+
+          {/* New folder input */}
+          {showNewFolder && (
+            <div className="px-3 py-2 border-b border-stone-100 bg-orange-50/50">
+              <input
+                autoFocus
+                value={newFolderName}
+                onChange={e => setNewFolderName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') createFolder()
+                  if (e.key === 'Escape') { setShowNewFolder(false); setNewFolderName('') }
+                }}
+                placeholder="Folder name..."
+                className="w-full text-xs bg-white border border-stone-200 rounded px-2 py-1.5 outline-none focus:border-orange-300 text-stone-900 placeholder-stone-400"
+              />
+              <div className="flex gap-1.5 mt-1.5">
+                <button onClick={createFolder} className="text-xs px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors">Create</button>
+                <button onClick={() => { setShowNewFolder(false); setNewFolderName('') }} className="text-xs px-2 py-1 text-stone-500 hover:text-stone-700 transition-colors">Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {/* Folders */}
+          {folders.map(folder => {
+            const folderNotes = filtered.filter(n => n.folder_id === folder.id)
+            const collapsed = collapsedFolders.has(folder.id)
+            return (
+              <div key={folder.id}>
+                <div className="flex items-center group/folder border-b border-stone-100">
+                  <button
+                    onClick={() => toggleFolder(folder.id)}
+                    className="flex items-center gap-1.5 flex-1 px-3 py-2 text-xs font-medium text-stone-500 hover:text-stone-800 hover:bg-stone-50 transition-colors"
+                  >
+                    <ChevronRight size={12} className={`transition-transform shrink-0 ${collapsed ? '' : 'rotate-90'}`} />
+                    {collapsed ? <Folder size={13} className="text-orange-400 shrink-0" /> : <FolderOpen size={13} className="text-orange-400 shrink-0" />}
+                    {renamingFolder === folder.id ? (
+                      <input
+                        autoFocus
+                        value={renameFolderName}
+                        onChange={e => setRenameFolderName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') renameFolder(folder.id)
+                          if (e.key === 'Escape') setRenamingFolder(null)
+                          e.stopPropagation()
+                        }}
+                        onClick={e => e.stopPropagation()}
+                        className="flex-1 bg-white border border-orange-300 rounded px-1 py-0.5 outline-none text-stone-900"
+                      />
+                    ) : (
+                      <span className="truncate">{folder.name}</span>
+                    )}
+                    <span className="ml-auto text-stone-300 font-normal">{folderNotes.length}</span>
+                  </button>
+                  <div className="flex items-center md:opacity-0 md:group-hover/folder:opacity-100 pr-1 gap-0.5 transition-opacity">
+                    <button
+                      onClick={() => { setRenamingFolder(folder.id); setRenameFolderName(folder.name) }}
+                      className="p-1 rounded hover:bg-stone-200 text-stone-400 text-[10px]"
+                      title="Rename"
+                    >
+                      ✎
+                    </button>
+                    <button
+                      onClick={() => deleteFolder(folder.id)}
+                      className="p-1 rounded hover:bg-red-50 text-stone-300 hover:text-red-400 transition-colors"
+                      title="Delete folder"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
+                </div>
+                {!collapsed && (
+                  <div className="pl-3">
+                    {folderNotes.map(note => renderNote(note))}
+                    {folderNotes.length === 0 && (
+                      <p className="text-xs text-stone-300 px-3 py-2">Empty folder</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {/* Unfoldered notes */}
+          {(folders.length > 0 || unfoldered.length > 0) && (
+            <>
+              {folders.length > 0 && unfoldered.length > 0 && (
+                <p className="text-xs text-stone-400 uppercase tracking-wider px-3 pt-3 pb-1.5 font-medium">
+                  Unfiled · {unfoldered.length}
+                </p>
+              )}
+              {folders.length === 0 && (
+                <p className="text-xs text-stone-400 uppercase tracking-wider px-3 pt-3 pb-1.5 font-medium">
+                  {filtered.length} notes
+                </p>
+              )}
+              {unfoldered.map(note => renderNote(note))}
+            </>
+          )}
+
           {filtered.length === 0 && (
             <div className="px-3 py-8 text-center">
               <p className="text-sm text-stone-400">
