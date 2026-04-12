@@ -7,6 +7,26 @@
   box-shadow: 0 0 0 1px #f4c6a5, 4px 0 24px rgba(0,0,0,0.08), -4px 0 24px rgba(0,0,0,0.08);
 }
 
+/* Inline wikilink decorations inside BlockNote editor */
+.wikilink {
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0 2px;
+  font-family: monospace;
+  transition: background-color 0.15s;
+}
+.wikilink-resolved {
+  color: #ea580c;
+  background-color: #fff7ed;
+}
+.wikilink-resolved:hover {
+  background-color: #ffedd5;
+}
+.wikilink-unresolved {
+  color: #a8a29e;
+  background-color: #fafaf9;
+}
+
 body {
   background-color: #fae8d4;
   background-image: repeating-linear-gradient(

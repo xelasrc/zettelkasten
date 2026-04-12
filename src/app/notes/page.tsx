@@ -706,27 +706,6 @@ export default function NotesPage() {
                 placeholder="Untitled"
               />
 
-              {/* Active wikilinks */}
-              {activeWikilinks.length > 0 && (
-                <div className="flex gap-1.5 flex-wrap mb-5">
-                  {activeWikilinks.map(title => {
-                    const resolved = noteTitleSet.has(title)
-                    return resolved ? (
-                      <button
-                        key={title}
-                        onClick={() => openNoteByTitle(title)}
-                        className="text-xs px-2.5 py-1 rounded-full border bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100 transition-colors font-mono"
-                      >
-                        [[{title}]]
-                      </button>
-                    ) : (
-                      <span key={title} className="text-xs px-2.5 py-1 rounded-full border bg-stone-50 text-stone-400 border-stone-200 font-mono">
-                        [[{title}]]
-                      </span>
-                    )
-                  })}
-                </div>
-              )}
 
               {/* Suggest Links panel */}
               {activeTab.suggestions !== null && (
@@ -778,6 +757,8 @@ export default function NotesPage() {
                   initialContent={activeTab.content}
                   onChange={updateContent}
                   noteTitles={noteTitles}
+                  noteTitleSet={noteTitleSet}
+                  onWikilinkClick={openNoteByTitle}
                 />
               )}
 
