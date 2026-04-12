@@ -74,6 +74,7 @@ export default function NotesPage() {
   const [moveMenuNoteId, setMoveMenuNoteId] = useState<number | null>(null)
   const [tabs, setTabs] = useState<OpenTab[]>(() => [makeEmptyTab()])
   const [activeKey, setActiveKey] = useState<number>(1)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const editorRef = useRef<EditorHandle>(null)
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
   const openHandledRef = useRef(false)
@@ -103,8 +104,29 @@ export default function NotesPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notes])
 
-  function createTab() {
-    const tab = makeEmptyTab()
+  async function createTab() {
+    const today = new Date().toLocaleDateString('en-CA') // "YYYY-MM-DD"
+
+    // If a note with today's date already exists, open it instead of creating a duplicate
+    const existing = notes.find(n => n.title === today)
+    if (existing) {
+      const alreadyOpen = tabs.find(t => t.id === existing.id)
+      if (alreadyOpen) {
+        setActiveKey(alreadyOpen._key)
+        return
+      }
+      await openNoteByTitle(today)
+      return
+    }
+
+    const res = await fetch('/api/notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: today, content: {} })
+    })
+    const note = await res.json()
+    const tab: OpenTab = { ...makeEmptyTab(), id: note.id, title: today, content: note.content }
+    setNotes(prev => [note, ...prev])
     setTabs(prev => [...prev, tab])
     setActiveKey(tab._key)
   }
@@ -179,7 +201,7 @@ export default function NotesPage() {
   }
 
   async function deleteNote(id: number) {
-    if (!confirm('Delete this note?')) return
+    setConfirmingDelete(false)
     await fetch(`/api/notes/${id}`, { method: 'DELETE' })
     setNotes(prev => prev.filter(n => n.id !== id))
     setTabs(prev => prev.map(t =>
@@ -228,6 +250,8 @@ export default function NotesPage() {
   useEffect(() => {
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current) }
   }, [])
+
+  useEffect(() => { setConfirmingDelete(false) }, [activeKey])
 
   const suggestLinks = useCallback(async (key: number) => {
     const tab = tabs.find(t => t._key === key)
@@ -685,12 +709,30 @@ export default function NotesPage() {
               </span>
             )}
             {activeTab?.id && (
-              <button
-                onClick={() => deleteNote(activeTab.id!)}
-                className="px-3 h-full hover:bg-red-50 text-stone-300 hover:text-red-400 transition-colors border-l border-stone-200"
-              >
-                <Trash2 size={13} />
-              </button>
+              confirmingDelete ? (
+                <div className="flex items-center gap-1 px-2 border-l border-stone-200">
+                  <span className="text-xs text-stone-400">Delete?</span>
+                  <button
+                    onClick={() => deleteNote(activeTab.id!)}
+                    className="text-xs px-2 py-0.5 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => setConfirmingDelete(false)}
+                    className="text-xs px-2 py-0.5 rounded hover:bg-stone-100 text-stone-500 transition-colors"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmingDelete(true)}
+                  className="px-3 h-full hover:bg-red-50 text-stone-300 hover:text-red-400 transition-colors border-l border-stone-200"
+                >
+                  <Trash2 size={13} />
+                </button>
+              )
             )}
           </div>
         </div>
